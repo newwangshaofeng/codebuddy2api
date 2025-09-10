@@ -178,13 +178,19 @@ class CodeBuddyAPIClient:
         
         return codebuddy_messages
 
-    def generate_codebuddy_headers(self, bearer_token: str, user_id: str = None) -> Dict[str, str]:
-        """生成CodeBuddy API所需的完整请求头（基于官方CLI格式）"""
-        request_id = str(uuid.uuid4()).replace('-', '')
-        conversation_id = str(uuid.uuid4())
-        conversation_request_id = secrets.token_hex(16)
-        conversation_message_id = str(uuid.uuid4()).replace('-', '')
-        
+    def generate_codebuddy_headers(
+        self,
+        bearer_token: str,
+        user_id: str = None,
+        conversation_id: Optional[str] = None,
+        conversation_request_id: Optional[str] = None,
+        conversation_message_id: Optional[str] = None,
+        request_id: Optional[str] = None
+    ) -> Dict[str, str]:
+        """
+        生成CodeBuddy API所需的完整请求头。
+        优先使用传入的会话ID，如果未提供则随机生成。
+        """
         headers = {
             'Host': 'www.codebuddy.ai',
             'Accept': 'application/json',
@@ -197,10 +203,10 @@ class CodeBuddyAPIClient:
             'x-stainless-retry-count': '0',
             'x-stainless-runtime': 'node',
             'x-stainless-runtime-version': 'v22.13.1',
-            'X-Conversation-ID': conversation_id,
-            'X-Conversation-Request-ID': conversation_request_id,
-            'X-Conversation-Message-ID': conversation_message_id,
-            'X-Request-ID': request_id,
+            'X-Conversation-ID': conversation_id or str(uuid.uuid4()),
+            'X-Conversation-Request-ID': conversation_request_id or secrets.token_hex(16),
+            'X-Conversation-Message-ID': conversation_message_id or str(uuid.uuid4()).replace('-', ''),
+            'X-Request-ID': request_id or str(uuid.uuid4()).replace('-', ''),
             'X-Agent-Intent': 'craft',
             'X-IDE-Type': 'CLI',
             'X-IDE-Name': 'CLI',
@@ -209,9 +215,8 @@ class CodeBuddyAPIClient:
             'X-Domain': 'www.codebuddy.ai',
             'User-Agent': 'CLI/1.0.7 CodeBuddy/1.0.7',
             'X-Product': 'SaaS',
-            'X-User-Id': user_id or 'b5be3a67-237e-4ee6-9b9a-0b9ecd7b454b'  # 确保总是有这个字段
+            'X-User-Id': user_id or 'b5be3a67-237e-4ee6-9b9a-0b9ecd7b454b'
         }
-            
         return headers
 
     async def chat_completions(

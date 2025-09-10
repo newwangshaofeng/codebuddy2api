@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import the routers
 from src.codebuddy_router import router as codebuddy_router
 from src.codebuddy_auth_router import router as codebuddy_auth_router
-from src.codebuddy_v2_router import router as codebuddy_v2_router
 from src.frontend_router import router as frontend_router
 
 from config import get_server_host, get_server_port, get_log_level
@@ -69,13 +68,6 @@ app.include_router(
     tags=["CodeBuddy Compatible API"]
 )
 
-# 挂载CodeBuddy V2 API路由（原生格式）
-app.include_router(
-    codebuddy_v2_router,
-    prefix="/codebuddy",
-    tags=["CodeBuddy V2 Native API"]
-)
-
 # 健康检查端点
 @app.get("/health")
 async def health_check():
@@ -91,10 +83,8 @@ async def root():
         "version": "1.0.0",
         "description": "CodeBuddy API proxy with OpenAI-compatible interface",
         "endpoints": {
-            "v1_models": "/codebuddy/v1/models",
-            "v1_chat": "/codebuddy/v1/chat/completions",
-            "v2_models": "/codebuddy/v2/models", 
-            "v2_chat": "/codebuddy/v2/chat/completions",
+            "models": "/codebuddy/v1/models",
+            "chat": "/codebuddy/v1/chat/completions",
             "credentials": "/codebuddy/v1/credentials",
             "auth_start": "/codebuddy/auth/start",
             "auth_poll": "/codebuddy/auth/poll",

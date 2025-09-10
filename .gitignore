@@ -129,9 +129,12 @@ dmypy.json
 .pyre/
 
 # CodeBuddy2API specific
-.codebuddy_creds/
-*.json
-!.codebuddy_creds/example_credential.json.example
+# Ignore the content of the credentials directory, but not the directory itself.
+# This ensures the directory is present in the repository.
+.codebuddy_creds/*
+# You can add a .gitkeep file inside .codebuddy_creds to ensure the directory is tracked.
+# Or, if you have an example file, you can explicitly un-ignore it like this:
+# !.codebuddy_creds/credential.example.json
 
 # IDE files
 .vscode/

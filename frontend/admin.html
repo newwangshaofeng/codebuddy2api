@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBuddy2API 管理控制面板</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --background-light: #f8fafc;
+            --background-dark: #1e293b;
+            --card-light: #ffffff;
+            --card-dark: #334155;
+            --text-light: #1f2937;
+            --text-dark: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-dark: #475569;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background-light);
+            color: var(--text-light);
+            transition: all 0.3s ease;
+        }
+
+        body.dark {
+            background-color: var(--background-dark);
+            color: var(--text-dark);
+        }
+
+        /* 顶部导航栏 */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 1rem 2rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 主要内容区域 */
+        .main-content {
+            margin-top: 80px;
+            padding: 2rem;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* 导航标签 */
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-light);
+            padding-bottom: 0;
+        }
+
+        body.dark .nav-tabs {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--secondary-color);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            color: var(--primary-color);
+        }
+
+        .nav-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        /* 标签面板 */
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: var(--card-light);
+            border: 1px solid var(--border-light);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        body.dark .card {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        body.dark .card-header {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-light);
+        }
+
+        body.dark .card-title {
+            color: var(--text-dark);
+        }
+
+        /* 按钮样式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        body.dark .form-label {
+            color: var(--text-dark);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            background: var(--card-light);
+            color: var(--text-light);
+            transition: all 0.2s ease;
+        }
+
+        body.dark .form-input {
+            border-color: var(--border-dark);
+            background: var(--card-dark);
+            color: var(--text-dark);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* 凭证列表 */
+        .credential-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .credential-item {
+            background: var(--background-light);
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.dark .credential-item {
+            background: var(--background-dark);
+            border-color: var(--border-dark);
+        }
+
+        .credential-info {
+            flex: 1;
+        }
+
+        .credential-id {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .credential-details {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .credential-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* 状态样式 */
+        .status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error-color);
+        }
+
+        .status-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        /* 通知样式 */
+        .notification {
+            position: fixed;
+            top: 100px;
+            right: 2rem;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 400px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success-color);
+        }
+
+        .notification.error {
+            background: var(--error-color);
+        }
+
+        .notification.warning {
+            background: var(--warning-color);
+        }
+
+        .notification.info {
+            background: var(--primary-color);
+        }
+
+        /* 加载样式 */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary-color);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.2rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+
+            .nav-tab {
+                flex: 1;
+                min-width: auto;
+            }
+
+            .credential-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .credential-actions {
+                align-self: stretch;
+                justify-content: flex-end;
+            }
+        }
+
+        /* 隐藏/显示元素 */
+        .hidden {
+            display: none !important;
+        }
+
+        /* 登录界面样式 */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .login-card {
+            background: var(--card-light);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        body.dark .login-card {
+            background: var(--card-dark);
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .login-subtitle {
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .login-input {
+            padding: 0.75rem;
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            background: var(--background-light);
+            color: var(--text-light);
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        body.dark .login-input {
+            border-color: var(--border-dark);
+            background: var(--background-dark);
+            color: var(--text-dark);
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .login-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .login-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .login-button:disabled {
+            background: var(--secondary-color);
+            cursor: not-allowed;
+        }
+
+        .login-error {
+            color: var(--error-color);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        /* OAuth2认证区域 */
+        .auth-section {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .auth-url-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--background-light);
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+        }
+
+        body.dark .auth-url-section {
+            background: var(--background-dark);
+            border-color: var(--border-dark);
+        }
+
+        .auth-url-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-light);
+            border-radius: 0.375rem;
+            background: white;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        body.dark .auth-url-input {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+            color: var(--text-dark);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .callback-section {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 0.5rem;
+        }
+
+        .auth-progress {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .auth-progress i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* API测试区域 */
+        .api-test {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+        }
+
+        .code-block {
+            background: var(--background-light);
+            border: 1px solid var(--border-light);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        body.dark .code-block {
+            background: var(--background-dark);
+            border-color: var(--border-dark);
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录界面 -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-title">
+                <i class="fas fa-robot"></i>
+                CodeBuddy2API
+            </div>
+            <div class="login-subtitle">
+                请输入管理密码以访问控制面板
+            </div>
+            <form class="login-form" onsubmit="handleLogin(event)">
+                <input 
+                    type="password" 
+                    id="loginPassword" 
+                    class="login-input" 
+                    placeholder="请输入密码" 
+                    required
+                    autocomplete="current-password"
+                >
+                <button type="submit" id="loginButton" class="login-button">
+                    <i class="fas fa-sign-in-alt"></i> 登录
+                </button>
+                <div id="loginError" class="login-error hidden"></div>
+            </form>
+        </div>
+    </div>
+    <!-- 顶部导航 -->
+    <header class="header">
+        <h1><i class="fas fa-robot"></i> CodeBuddy2API 管理面板</h1>
+        <div class="header-controls">
+            <button class="theme-toggle" onclick="toggleTheme()">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
+            <button class="btn btn-secondary" onclick="logout()" style="margin-left: 0.5rem;">
+                <i class="fas fa-sign-out-alt"></i> 退出
+            </button>
+        </div>
+    </header>
+
+    <!-- 主要内容 -->
+    <main class="main-content">
+        <!-- 导航标签 -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('dashboard')">
+                <i class="fas fa-tachometer-alt"></i> 仪表板
+            </button>
+            <button class="nav-tab" onclick="showTab('credentials')">
+                <i class="fas fa-key"></i> 凭证管理
+            </button>
+            <button class="nav-tab" onclick="showTab('api-test')">
+                <i class="fas fa-flask"></i> API 测试
+            </button>
+            <button class="nav-tab" onclick="showTab('settings')">
+                <i class="fas fa-cog"></i> 设置
+            </button>
+        </div>
+
+        <!-- 仪表板面板 -->
+        <div id="dashboard" class="tab-panel active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalCredentials">-</div>
+                    <div class="stat-label">总凭证数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="serviceStatus">运行中</div>
+                    <div class="stat-label">服务状态</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="apiEndpoint">-</div>
+                    <div class="stat-label">API 端点</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">服务信息</h3>
+                    <button class="btn btn-primary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+                <div id="serviceInfo" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div>加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 凭证管理面板 -->
+        <div id="credentials" class="tab-panel">
+            <!-- OAuth2自动认证区域 -->
+            <div class="card auth-section">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-magic"></i> 自动获取认证</h3>
+                </div>
+                <p style="margin-bottom: 1rem; color: var(--secondary-color);">
+                    点击下方按钮自动启动CodeBuddy OAuth2认证流程，系统将自动获取并保存您的认证凭证。
+                </p>
+                <button class="btn btn-primary" id="getAuthBtn" onclick="startAuth()">
+                    <i class="fas fa-play"></i> 开始认证
+                </button>
+                
+                <!-- 认证URL显示区域 -->
+                <div id="authUrlSection" class="auth-url-section hidden">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">认证链接已生成</h4>
+                    <p style="margin-bottom: 1rem; color: var(--secondary-color);">
+                        请点击下面的链接完成CodeBuddy账号登录：
+                    </p>
+                    <input type="text" id="authUrlInput" class="auth-url-input" readonly>
+                    <div class="auth-buttons">
+                        <button class="btn btn-success" onclick="openAuthUrl()">
+                            <i class="fas fa-external-link-alt"></i> 打开链接
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyAuthUrl()">
+                            <i class="fas fa-copy"></i> 复制链接
+                        </button>
+                        <button class="btn btn-warning" onclick="showManualCallback()">
+                            <i class="fas fa-hand-pointer"></i> 手动回调
+                        </button>
+                    </div>
+                    
+                    <!-- 自动回调等待区域 -->
+                    <div id="autoCallbackSection" class="callback-section">
+                        <div class="auth-progress">
+                            <i class="fas fa-clock"></i>
+                            <div>等待认证完成...</div>
+                            <small style="color: var(--secondary-color);">完成登录后系统将自动获取凭证</small>
+                        </div>
+                        <div style="text-align: center; margin-top: 1rem;">
+                            <button class="btn btn-secondary" onclick="waitForAutoCallback()">
+                                <i class="fas fa-sync-alt"></i> 检查认证状态
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 手动回调区域 -->
+                    <div id="manualCallbackSection" class="callback-section hidden">
+                        <h5 style="margin-bottom: 1rem;">手动输入回调链接</h5>
+                        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--secondary-color);">
+                            如果自动检测失败，请在完成登录后，将浏览器地址栏中的完整URL粘贴到下面：
+                        </p>
+                        <input type="text" id="callbackUrl" class="form-input" placeholder="粘贴回调URL...">
+                        <div style="margin-top: 1rem; text-align: right;">
+                            <button class="btn btn-secondary" onclick="waitForAutoCallback()">返回自动模式</button>
+                            <button class="btn btn-success" onclick="submitCallbackUrl()">提交</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 手动添加凭证区域 -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-edit"></i> 手动添加凭证</h3>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="bearerToken">Bearer Token <span style="color: var(--error-color);">*</span></label>
+                    <textarea 
+                        id="bearerToken" 
+                        class="form-input form-textarea" 
+                        placeholder="输入您的 CodeBuddy Bearer Token..."
+                        rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="userId">用户ID (可选)</label>
+                    <input 
+                        type="text" 
+                        id="userId" 
+                        class="form-input" 
+                        placeholder="输入用户ID (可选)">
+                </div>
+                <button class="btn btn-success" onclick="addCredential()">
+                    <i class="fas fa-plus"></i> 添加凭证
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">已保存的凭证</h3>
+                    <button class="btn btn-primary" onclick="loadCredentials()">
+                        <i class="fas fa-sync-alt"></i> 刷新列表
+                    </button>
+                </div>
+                <div id="credentialsList" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <div>加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API测试面板 -->
+        <div id="api-test" class="tab-panel">
+            <div class="card api-test">
+                <div class="card-header">
+                    <h3 class="card-title">聊天完成测试</h3>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="testModel">模型</label>
+                    <select id="testModel" class="form-input">
+                        <option value="auto-chat">auto-chat</option>
+                        <option value="claude-4.0">claude-4.0</option>
+                        <option value="gpt-5">gpt-5</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="testMessage">测试消息</label>
+                    <textarea 
+                        id="testMessage" 
+                        class="form-input form-textarea" 
+                        placeholder="输入测试消息..."
+                        rows="3">Hello, what is 2+2?</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="testStream" style="margin-right: 0.5rem;">
+                        流式响应
+                    </label>
+                </div>
+                <button class="btn btn-primary" onclick="testAPI()">
+                    <i class="fas fa-paper-plane"></i> 发送测试
+                </button>
+                
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label class="form-label">响应结果</label>
+                    <div id="testResult" class="code-block" style="min-height: 200px; background-color: #1e1e1e; color: #ffffff;">
+                        点击"发送测试"查看API响应...
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">API 使用示例</h3>
+                </div>
+                <h4 style="margin-bottom: 1rem; color: var(--primary-color);">curl 示例:</h4>
+                <div class="code-block">curl -X POST "http://127.0.0.1:8001/codebuddy/v1/chat/completions" \
+  -H "Authorization: Bearer YOUR_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto-chat",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'</div>
+
+                <h4 style="margin: 1.5rem 0 1rem; color: var(--primary-color);">Python 示例:</h4>
+                <div class="code-block">import openai
+
+client = openai.OpenAI(
+    api_key="YOUR_PASSWORD",
+    base_url="http://127.0.0.1:8001/codebuddy/v1"
+)
+
+response = client.chat.completions.create(
+    model="auto-chat",
+    messages=[
+        {"role": "user", "content": "Hello!"}
+    ]
+)
+
+print(response.choices[0].message.content)</div>
+            </div>
+        </div>
+
+        <!-- 设置面板 -->
+        <div id="settings" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">服务配置</h3>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">API 访问密码</label>
+                    <input type="password" class="form-input" placeholder="在环境变量 CODEBUDDY_PASSWORD 中设置" readonly>
+                    <small style="color: var(--secondary-color); margin-top: 0.5rem; display: block;">
+                        请在 .env 文件中设置 CODEBUDDY_PASSWORD 环境变量
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">CodeBuddy API 端点</label>
+                    <input type="text" class="form-input" value="https://www.codebuddy.ai" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">服务地址</label>
+                    <input type="text" class="form-input" value="http://127.0.0.1:8001" readonly>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">如何获取 Bearer Token</h3>
+                </div>
+                <ol style="line-height: 1.8;">
+                    <li>访问 <a href="https://www.codebuddy.ai" target="_blank" style="color: var(--primary-color);">CodeBuddy官网</a> 并登录</li>
+                    <li>打开浏览器开发者工具 (F12)</li>
+                    <li>切换到 "Network" (网络) 标签页</li>
+                    <li>在 CodeBuddy 中发送一条消息</li>
+                    <li>在网络请求中找到 API 调用</li>
+                    <li>查看请求头中的 "Authorization" 字段</li>
+                    <li>复制 "Bearer " 后面的 token 值</li>
+                    <li>将 token 添加到凭证管理中</li>
+                </ol>
+            </div>
+        </div>
+    </main>
+
+    <!-- 通知区域 -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // 全局变量
+        let currentTheme = 'light';
+        let servicePassword = '';
+        let currentAuthData = null;
+        let authPollingInterval = null;
+        let isAuthenticated = false;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            showTab('dashboard');
+            
+            // 检查是否已经登录
+            const savedPassword = sessionStorage.getItem('servicePassword');
+            if (savedPassword) {
+                servicePassword = savedPassword;
+                isAuthenticated = true;
+                hideLoginOverlay();
+                loadDashboard();
+            } else {
+                showLoginOverlay();
+            }
+        });
+
+        // 主题切换
+        function toggleTheme() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(currentTheme);
+            localStorage.setItem('theme', currentTheme);
+        }
+
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            applyTheme(savedTheme);
+        }
+
+        function applyTheme(theme) {
+            currentTheme = theme;
+            if (theme === 'dark') {
+                document.body.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fas fa-sun';
+            } else {
+                document.body.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fas fa-moon';
+            }
+        }
+
+        // 标签页切换
+        function showTab(tabId) {
+            // 隐藏所有面板
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            
+            // 移除所有标签的激活状态
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 显示目标面板
+            document.getElementById(tabId).classList.add('active');
+            
+            // 激活对应标签
+            event.target.classList.add('active');
+            
+            // 加载对应数据
+            if (tabId === 'dashboard') {
+                loadDashboard();
+            } else if (tabId === 'credentials') {
+                loadCredentials();
+            }
+        }
+
+        // 通知系统
+        function showNotification(message, type = 'info', duration = 5000) {
+            const notification = document.getElementById('notification');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>${message}</div>
+                    <button onclick="hideNotification()" style="background: none; border: none; color: inherit; cursor: pointer; padding: 0; margin-left: 1rem;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                hideNotification();
+            }, duration);
+        }
+
+        function hideNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.remove('show');
+        }
+
+        // 登录相关函数
+        function showLoginOverlay() {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+            document.getElementById('loginPassword').focus();
+        }
+
+        function hideLoginOverlay() {
+            document.getElementById('loginOverlay').classList.add('hidden');
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const password = document.getElementById('loginPassword').value;
+            const loginButton = document.getElementById('loginButton');
+            const loginError = document.getElementById('loginError');
+            
+            if (!password) {
+                showLoginError('请输入密码');
+                return;
+            }
+            
+            // 显示加载状态
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 验证中...';
+            loginError.classList.add('hidden');
+            
+            try {
+                // 测试密码是否正确
+                const testResponse = await fetch('/codebuddy/v1/credentials', {
+                    headers: {
+                        'Authorization': `Bearer ${password}`
+                    }
+                });
+                
+                if (testResponse.status !== 403) {
+                    // 登录成功
+                    servicePassword = password;
+                    isAuthenticated = true;
+                    
+                    // 保存到sessionStorage（会话级别，关闭浏览器就失效）
+                    sessionStorage.setItem('servicePassword', password);
+                    
+                    hideLoginOverlay();
+                    loadDashboard();
+                    showNotification('登录成功！', 'success');
+                } else {
+                    throw new Error('密码错误');
+                }
+            } catch (error) {
+                showLoginError('密码错误，请重试');
+            } finally {
+                // 恢复按钮状态
+                loginButton.disabled = false;
+                loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录';
+            }
+        }
+        
+        function showLoginError(message) {
+            const loginError = document.getElementById('loginError');
+            loginError.textContent = message;
+            loginError.classList.remove('hidden');
+        }
+        
+        function logout() {
+            servicePassword = '';
+            isAuthenticated = false;
+            sessionStorage.removeItem('servicePassword');
+            showLoginOverlay();
+            showNotification('已退出登录', 'info');
+        }
+
+        // 获取认证头
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${servicePassword}`
+            };
+        }
+
+        // 仪表板相关功能
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    updateServiceInfo(data);
+                } else {
+                    document.getElementById('serviceInfo').innerHTML = 
+                        '<div class="status status-error">服务连接失败</div>';
+                }
+            } catch (error) {
+                document.getElementById('serviceInfo').innerHTML = 
+                    `<div class="status status-error">连接错误: ${error.message}</div>`;
+            }
+
+            // 加载凭证统计
+            try {
+                const credResponse = await fetch('/codebuddy/v1/credentials', { 
+                    headers: getAuthHeaders() 
+                });
+                if (credResponse.ok) {
+                    const credData = await credResponse.json();
+                    document.getElementById('totalCredentials').textContent = credData.credentials?.length || 0;
+                }
+            } catch (error) {
+                console.error('Failed to load credentials count:', error);
+            }
+
+            document.getElementById('apiEndpoint').textContent = window.location.origin + '/codebuddy/v1';
+        }
+
+        function updateServiceInfo(data) {
+            document.getElementById('serviceInfo').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div>
+                        <strong>服务名称:</strong><br>
+                        <span class="status status-success">${data.service || 'CodeBuddy2API'}</span>
+                    </div>
+                    <div>
+                        <strong>版本:</strong><br>
+                        <span>${data.version || '1.0.0'}</span>
+                    </div>
+                    <div>
+                        <strong>状态:</strong><br>
+                        <span class="status status-success">${data.status || 'healthy'}</span>
+                    </div>
+                    <div>
+                        <strong>描述:</strong><br>
+                        <span>${data.description || 'CodeBuddy API proxy'}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function refreshDashboard() {
+            document.getElementById('serviceInfo').innerHTML = 
+                '<div class="loading"><i class="fas fa-spinner fa-spin"></i><div>刷新中...</div></div>';
+            loadDashboard();
+        }
+
+        // 凭证管理功能
+        async function loadCredentials() {
+            const credentialsList = document.getElementById('credentialsList');
+            credentialsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>';
+            
+            try {
+                const response = await fetch('/codebuddy/v1/credentials', { 
+                    headers: getAuthHeaders() 
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayCredentials(data.credentials || []);
+                } else if (response.status === 403) {
+                    credentialsList.innerHTML = '<div class="status status-error">认证失败，请重新登录</div>';
+                    logout();
+                } else {
+                    credentialsList.innerHTML = `<div class="status status-error">加载失败: ${response.status}</div>`;
+                }
+            } catch (error) {
+                credentialsList.innerHTML = `<div class="status status-error">网络错误: ${error.message}</div>`;
+            }
+        }
+
+        function displayCredentials(credentials) {
+            const credentialsList = document.getElementById('credentialsList');
+            
+            if (credentials.length === 0) {
+                credentialsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--secondary-color);">暂无凭证，请添加第一个凭证</div>';
+                return;
+            }
+
+            credentialsList.innerHTML = '<div class="credential-list">' + 
+                credentials.map((cred, index) => `
+                    <div class="credential-item">
+                        <div class="credential-info">
+                            <div class="credential-id">凭证 #${index + 1}</div>
+                            <div class="credential-details">
+                                ${cred.user_id ? `用户ID: ${cred.user_id}<br>` : ''}
+                                ${cred.token_preview ? `Token: ${cred.token_preview}<br>` : ''}
+                                状态: ${cred.has_token ? '<span style="color: var(--success-color);">✓ 已配置</span>' : '<span style="color: var(--error-color);">✗ 未配置</span>'}
+                                ${cred.created_at ? `<br>创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}` : ''}
+                            </div>
+                        </div>
+                        <div class="credential-actions">
+                            <button class="btn btn-success" onclick="testCredential(${index})">
+                                <i class="fas fa-check"></i> 测试
+                            </button>
+                        </div>
+                    </div>
+                `).join('') + 
+            '</div>';
+        }
+
+        async function addCredential() {
+            const bearerToken = document.getElementById('bearerToken').value.trim();
+            const userId = document.getElementById('userId').value.trim();
+
+            if (!bearerToken) {
+                showNotification('请输入 Bearer Token', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/codebuddy/v1/credentials', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        bearer_token: bearerToken,
+                        user_id: userId || undefined
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showNotification('凭证添加成功！', 'success');
+                    document.getElementById('bearerToken').value = '';
+                    document.getElementById('userId').value = '';
+                    loadCredentials();
+                } else {
+                    const errorData = await response.json();
+                    showNotification(`添加失败: ${errorData.detail || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showNotification(`网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCredential(index) {
+            showNotification('正在测试凭证...', 'info');
+            
+            try {
+                // 先试试简单的测试接口
+                const response = await fetch('/codebuddy/v1/chat/completions', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        model: 'claude-4.0',
+                        messages: [{ role: 'user', content: 'test' }],
+                        max_tokens: 1
+                    })
+                });
+                
+                if (response.ok) {
+                    showNotification('凭证测试成功！ ✓', 'success');
+                } else if (response.status === 401 || response.status === 403) {
+                    showNotification('凭证无效或已过期 ✗', 'error');
+                } else {
+                    // 其他错误也认为是凭证问题
+                    const errorText = await response.text();
+                    showNotification(`测试失败: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                showNotification(`网络错误: ${error.message}`, 'error');
+            }
+        }
+
+        // API测试功能
+        async function testAPI() {
+            const model = document.getElementById('testModel').value;
+            const message = document.getElementById('testMessage').value;
+            const stream = document.getElementById('testStream').checked;
+            const resultDiv = document.getElementById('testResult');
+
+            if (!message.trim()) {
+                showNotification('请输入测试消息', 'error');
+                return;
+            }
+
+            resultDiv.innerHTML = '正在发送请求...\n';
+
+            try {
+                const response = await fetch('/codebuddy/v1/chat/completions', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [{ role: 'user', content: message }],
+                        stream: stream
+                    })
+                });
+
+                if (stream) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    resultDiv.innerHTML = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data.trim() === '[DONE]') {
+                                    resultDiv.innerHTML += '\n\n[流结束]';
+                                    continue;
+                                }
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    resultDiv.innerHTML += JSON.stringify(parsed, null, 2) + '\n\n';
+                                } catch (e) {
+                                    // 忽略解析错误
+                                }
+                            }
+                        }
+                        resultDiv.scrollTop = resultDiv.scrollHeight;
+                    }
+                } else {
+                    const data = await response.json();
+                    resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                }
+
+                if (!response.ok) {
+                    showNotification('API 调用失败', 'error');
+                } else {
+                    showNotification('API 测试成功！', 'success');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `错误: ${error.message}`;
+                showNotification(`测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // OAuth2认证相关功能
+        async function startAuth() {
+            const btn = document.getElementById('getAuthBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在获取认证链接...';
+            
+            try {
+                const response = await fetch('/codebuddy/auth/start', { method: 'GET' });
+                const data = await response.json();
+                
+                if (response.ok && data.success && data.verification_uri_complete) {
+                    currentAuthData = { 
+                        device_code: data.device_code,
+                        code_verifier: data.code_verifier,
+                        method: data.method
+                    };
+                    
+                    document.getElementById('authUrlInput').value = data.verification_uri_complete;
+                    document.getElementById('authUrlSection').style.display = 'block';
+                    
+                    // 显示认证方法特定的说明
+                    let instructions = '';
+                    switch(data.method) {
+                        case 'device_flow':
+                            instructions = '✅ 设备授权流程已启动，请点击链接完成授权';
+                            break;
+                        case 'web_authorization':
+                            instructions = '✅ 网页授权流程已启动，请点击链接登录CodeBuddy';
+                            break;
+                        case 'sso_flow':
+                            instructions = '✅ 腾讯云SSO认证流程已启动，请点击链接完成认证';
+                            break;
+                        case 'manual_guided':
+                            instructions = '✅ 手动引导认证流程已启动，请按照步骤操作';
+                            // 显示详细步骤
+                            if (data.manual_steps) {
+                                showManualSteps(data.manual_steps);
+                            }
+                            break;
+                        default:
+                            instructions = '✅ 认证链接已生成，请点击链接完成登录';
+                    }
+                    
+                    showNotification(instructions, 'success');
+                    
+                    // 对于手动引导流程，使用较慢的轮询
+                    if (data.method === 'manual_guided') {
+                        showManualGuidedInstructions();
+                    } else {
+                        // 开始轮询认证状态
+                        pollForToken();
+                    }
+                } else {
+                    let errorMessage = data.message || '获取认证链接失败';
+                    if (data.manual_instructions) {
+                        // 显示手动指导
+                        showManualInstructions(data.manual_instructions);
+                        errorMessage += ' 请查看手动获取指导。';
+                    }
+                    showNotification(`❌ ${errorMessage}`, 'error');
+                    resetAuthButton();
+                }
+            } catch (error) {
+                showNotification(`❌ 网络错误: ${error.message}`, 'error');
+                resetAuthButton();
+            }
+        }
+
+        function resetAuthButton() {
+            const btn = document.getElementById('getAuthBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> 开始认证';
+        }
+
+        function copyAuthUrl() {
+            const input = document.getElementById('authUrlInput');
+            input.select();
+            document.execCommand('copy');
+            showNotification('认证链接已复制到剪贴板', 'success');
+        }
+
+        function openAuthUrl() {
+            const url = document.getElementById('authUrlInput').value;
+            window.open(url, '_blank');
+            showNotification('已在新窗口打开认证页面，请完成登录', 'info');
+        }
+
+        function showManualCallback() {
+            document.getElementById('manualCallbackSection').style.display = 'block';
+            document.getElementById('autoCallbackSection').style.display = 'none';
+            stopPolling();
+        }
+
+        function waitForAutoCallback() {
+            document.getElementById('manualCallbackSection').style.display = 'none';
+            document.getElementById('autoCallbackSection').style.display = 'block';
+            if (currentAuthData) {
+                pollForToken();
+            }
+        }
+
+        async function submitCallbackUrl() {
+            const callbackUrl = document.getElementById('callbackUrl').value.trim();
+            if (!callbackUrl) {
+                showNotification('请输入回调链接', 'error');
+                return;
+            }
+
+            // 尝试从URL中提取授权码
+            try {
+                const url = new URL(callbackUrl);
+                const code = url.searchParams.get('code');
+                const state = url.searchParams.get('state');
+                
+                if (code) {
+                    showNotification('正在处理授权码...', 'info');
+                    // 这里需要调用后端API来处理授权码
+                    // 暂时显示成功消息
+                    showNotification('授权码已提交，正在获取token...', 'success');
+                    document.getElementById('callbackUrl').value = '';
+                } else {
+                    showNotification('URL中未找到授权码，请确认链接正确', 'error');
+                }
+            } catch (error) {
+                showNotification('无效的URL格式', 'error');
+            }
+        }
+
+        function pollForToken() {
+            if (!currentAuthData) return;
+            
+            stopPolling(); // 清除之前的轮询
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch('/codebuddy/auth/poll', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            device_code: currentAuthData.device_code,
+                            code_verifier: currentAuthData.code_verifier
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.access_token) {
+                        // 认证成功
+                        stopPolling();
+                        showNotification('🎉 认证成功！Token已自动保存', 'success');
+                        
+                        // 隐藏认证区域
+                        document.getElementById('authUrlSection').style.display = 'none';
+                        resetAuthButton();
+                        
+                        // 刷新凭证列表
+                        loadCredentials();
+                        
+                        // 清理认证数据
+                        currentAuthData = null;
+                        
+                    } else if (data.error === 'authorization_pending') {
+                        // 继续等待用户授权
+                        console.log('等待用户授权...');
+                    } else if (data.error === 'slow_down') {
+                        // 减慢轮询频率
+                        console.log('减慢轮询频率');
+                    } else if (data.error === 'expired_token') {
+                        // Token过期，停止轮询
+                        stopPolling();
+                        showNotification('认证链接已过期，请重新开始认证', 'warning');
+                        resetAuthButton();
+                        document.getElementById('authUrlSection').style.display = 'none';
+                    } else if (data.error === 'access_denied') {
+                        // 用户拒绝授权
+                        stopPolling();
+                        showNotification('用户拒绝了授权请求', 'warning');
+                        resetAuthButton();
+                        document.getElementById('authUrlSection').style.display = 'none';
+                    } else {
+                        // 其他错误
+                        console.error('轮询错误:', data);
+                    }
+                } catch (error) {
+                    console.error('轮询网络错误:', error);
+                }
+            };
+
+            // 立即执行一次
+            poll();
+            
+            // 设置轮询间隔（每5秒一次）
+            authPollingInterval = setInterval(poll, 5000);
+        }
+
+        function stopPolling() {
+            if (authPollingInterval) {
+                clearInterval(authPollingInterval);
+                authPollingInterval = null;
+            }
+        }
+
+        function showManualInstructions(instructions) {
+            // 创建一个模态框显示手动获取指导
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            `;
+
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 0.5rem;
+                padding: 2rem;
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+
+            if (document.body.classList.contains('dark')) {
+                content.style.background = 'var(--card-dark)';
+                content.style.color = 'var(--text-dark)';
+            }
+
+            content.innerHTML = `
+                <h3 style="margin-bottom: 1rem; color: var(--primary-color);">手动获取 Bearer Token</h3>
+                <ol style="line-height: 1.8; margin-bottom: 1.5rem;">
+                    ${instructions.steps.map(step => `<li>${step}</li>`).join('')}
+                </ol>
+                <div style="text-align: right;">
+                    <button class="btn btn-secondary" onclick="this.closest('div').parentElement.remove()">
+                        <i class="fas fa-times"></i> 关闭
+                    </button>
+                    <a href="${instructions.alternative_url}" target="_blank" class="btn btn-primary" style="margin-left: 0.5rem;">
+                        <i class="fas fa-external-link-alt"></i> 打开 CodeBuddy
+                    </a>
+                </div>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            // 点击背景关闭
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        function showManualGuidedInstructions() {
+            // 显示手动引导说明，并提供选择
+            const autoSection = document.getElementById('autoCallbackSection');
+            autoSection.innerHTML = `
+                <div class="auth-progress">
+                    <i class="fas fa-info-circle"></i>
+                    <div>手动认证流程</div>
+                    <small style="color: var(--secondary-color);">请按照步骤获取Bearer Token</small>
+                </div>
+                <div style="text-align: center; margin-top: 1rem;">
+                    <button class="btn btn-success" onclick="openAuthUrl()" style="margin-right: 0.5rem;">
+                        <i class="fas fa-external-link-alt"></i> 打开CodeBuddy
+                    </button>
+                    <button class="btn btn-secondary" onclick="skipToManualAdd()">
+                        <i class="fas fa-edit"></i> 直接手动添加Token
+                    </button>
+                </div>
+            `;
+        }
+
+        function showManualSteps(steps) {
+            // 在通知中显示详细步骤，或者在页面上显示
+            let stepsHtml = '<div style="margin-top: 1rem;"><h4>详细操作步骤：</h4><ol>';
+            steps.forEach(step => {
+                stepsHtml += `<li>${step}</li>`;
+            });
+            stepsHtml += '</ol></div>';
+            
+            // 可以选择在页面上显示步骤，或者在模态框中显示
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            `;
+
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white;
+                border-radius: 0.5rem;
+                padding: 2rem;
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+
+            if (document.body.classList.contains('dark')) {
+                content.style.background = 'var(--card-dark)';
+                content.style.color = 'var(--text-dark)';
+            }
+
+            content.innerHTML = `
+                <h3 style="margin-bottom: 1rem; color: var(--primary-color);">CodeBuddy 手动认证步骤</h3>
+                ${stepsHtml}
+                <div style="text-align: right; margin-top: 2rem;">
+                    <button class="btn btn-secondary" onclick="this.closest('div').parentElement.remove()">
+                        <i class="fas fa-times"></i> 我知道了
+                    </button>
+                    <button class="btn btn-primary" onclick="openAuthUrl(); this.closest('div').parentElement.remove();" style="margin-left: 0.5rem;">
+                        <i class="fas fa-external-link-alt"></i> 打开CodeBuddy
+                    </button>
+                </div>
+            `;
+
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            // 点击背景关闭
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        function skipToManualAdd() {
+            // 跳转到手动添加Token的区域
+            document.getElementById('authUrlSection').style.display = 'none';
+            resetAuthButton();
+            
+            // 聚焦到手动添加区域
+            document.querySelector('#bearerToken').focus();
+            showNotification('请在下方手动添加您从CodeBuddy获取的Bearer Token', 'info');
+        }
+
+        // 清理函数：页面卸载时停止轮询
+        window.addEventListener('beforeunload', () => {
+            stopPolling();
+        });
+    </script>
+</body>
+</html>

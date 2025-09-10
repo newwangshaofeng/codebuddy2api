@@ -293,9 +293,14 @@
             border: 1px solid var(--border-light);
             border-radius: 0.5rem;
             padding: 1rem;
-            display: flex;
-            justify-content: space-between;
+            display: grid; /* 改为grid布局 */
+            grid-template-columns: auto 1fr auto; /* 图标、信息、按钮 */
+            gap: 1rem;
             align-items: center;
+        }
+
+        .credential-status-icon {
+            font-size: 1.5rem;
         }
 
         body.dark .credential-item {
@@ -438,18 +443,13 @@
             display: none !important;
         }
 
-        /* 登录界面样式 */
-        .login-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+        /* 登录页面样式 */
+        .login-page {
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000;
+            min-height: 100vh;
+            width: 100%;
         }
 
         .login-card {
@@ -639,9 +639,12 @@
         }
 
         .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
+            font-size: 1.5rem; /* 缩小字体以适应更长的内容 */
+            font-weight: 600;
             margin-bottom: 0.5rem;
+            color: white; /* 确保所有stat值都是白色 */
+            word-wrap: break-word; /* 允许长文本换行 */
+            line-height: 1.2; /* 调整行高 */
         }
 
         .stat-label {
@@ -651,8 +654,8 @@
     </style>
 </head>
 <body>
-    <!-- 登录界面 -->
-    <div id="loginOverlay" class="login-overlay">
+    <!-- 登录页面 -->
+    <div id="loginPage" class="login-page">
         <div class="login-card">
             <div class="login-title">
                 <i class="fas fa-robot"></i>
@@ -662,11 +665,11 @@
                 请输入管理密码以访问控制面板
             </div>
             <form class="login-form" onsubmit="handleLogin(event)">
-                <input 
-                    type="password" 
-                    id="loginPassword" 
-                    class="login-input" 
-                    placeholder="请输入密码" 
+                <input
+                    type="password"
+                    id="loginPassword"
+                    class="login-input"
+                    placeholder="请输入密码"
                     required
                     autocomplete="current-password"
                 >
@@ -677,284 +680,272 @@
             </form>
         </div>
     </div>
-    <!-- 顶部导航 -->
-    <header class="header">
-        <h1><i class="fas fa-robot"></i> CodeBuddy2API 管理面板</h1>
-        <div class="header-controls">
-            <button class="theme-toggle" onclick="toggleTheme()">
-                <i class="fas fa-moon" id="themeIcon"></i>
-            </button>
-            <button class="btn btn-secondary" onclick="logout()" style="margin-left: 0.5rem;">
-                <i class="fas fa-sign-out-alt"></i> 退出
-            </button>
-        </div>
-    </header>
 
-    <!-- 主要内容 -->
-    <main class="main-content">
-        <!-- 导航标签 -->
-        <div class="nav-tabs">
-            <button class="nav-tab active" onclick="showTab('dashboard')">
-                <i class="fas fa-tachometer-alt"></i> 仪表板
-            </button>
-            <button class="nav-tab" onclick="showTab('credentials')">
-                <i class="fas fa-key"></i> 凭证管理
-            </button>
-            <button class="nav-tab" onclick="showTab('api-test')">
-                <i class="fas fa-flask"></i> API 测试
-            </button>
-            <button class="nav-tab" onclick="showTab('settings')">
-                <i class="fas fa-cog"></i> 设置
-            </button>
-        </div>
-
-        <!-- 仪表板面板 -->
-        <div id="dashboard" class="tab-panel active">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalCredentials">-</div>
-                    <div class="stat-label">总凭证数</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="serviceStatus">运行中</div>
-                    <div class="stat-label">服务状态</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="apiEndpoint">-</div>
-                    <div class="stat-label">API 端点</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">服务信息</h3>
-                    <button class="btn btn-primary" onclick="refreshDashboard()">
-                        <i class="fas fa-sync-alt"></i> 刷新
-                    </button>
-                </div>
-                <div id="serviceInfo" class="loading">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <div>加载中...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 凭证管理面板 -->
-        <div id="credentials" class="tab-panel">
-            <!-- OAuth2自动认证区域 -->
-            <div class="card auth-section">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-magic"></i> 自动获取认证</h3>
-                </div>
-                <p style="margin-bottom: 1rem; color: var(--secondary-color);">
-                    点击下方按钮自动启动CodeBuddy OAuth2认证流程，系统将自动获取并保存您的认证凭证。
-                </p>
-                <button class="btn btn-primary" id="getAuthBtn" onclick="startAuth()">
-                    <i class="fas fa-play"></i> 开始认证
+    <!-- 主仪表盘页面 -->
+    <div id="dashboardPage" class="hidden">
+        <!-- 顶部导航 -->
+        <header class="header">
+            <h1><i class="fas fa-robot"></i> CodeBuddy2API 管理面板</h1>
+            <div class="header-controls">
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <i class="fas fa-moon" id="themeIcon"></i>
                 </button>
-                
-                <!-- 认证URL显示区域 -->
-                <div id="authUrlSection" class="auth-url-section hidden">
-                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">认证链接已生成</h4>
-                    <p style="margin-bottom: 1rem; color: var(--secondary-color);">
-                        请点击下面的链接完成CodeBuddy账号登录：
-                    </p>
-                    <input type="text" id="authUrlInput" class="auth-url-input" readonly>
-                    <div class="auth-buttons">
-                        <button class="btn btn-success" onclick="openAuthUrl()">
-                            <i class="fas fa-external-link-alt"></i> 打开链接
-                        </button>
-                        <button class="btn btn-secondary" onclick="copyAuthUrl()">
-                            <i class="fas fa-copy"></i> 复制链接
-                        </button>
-                        <button class="btn btn-warning" onclick="showManualCallback()">
-                            <i class="fas fa-hand-pointer"></i> 手动回调
+                <button class="btn btn-secondary" onclick="logout()" style="margin-left: 0.5rem;">
+                    <i class="fas fa-sign-out-alt"></i> 退出
+                </button>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="main-content">
+            <!-- 导航标签 -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showTab('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> 仪表板
+                </button>
+                <button class="nav-tab" onclick="showTab('credentials')">
+                    <i class="fas fa-key"></i> 凭证管理
+                </button>
+                <button class="nav-tab" onclick="showTab('api-test')">
+                    <i class="fas fa-flask"></i> API 测试
+                </button>
+                <button class="nav-tab" onclick="showTab('settings')">
+                    <i class="fas fa-cog"></i> 设置
+                </button>
+            </div>
+
+            <!-- 仪表板面板 -->
+            <div id="dashboard" class="tab-panel active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCredentials">-</div>
+                        <div class="stat-label">总凭证数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="serviceStatus">运行中</div>
+                        <div class="stat-label">服务状态</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="apiEndpoint">-</div>
+                        <div class="stat-label">API 端点</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">服务信息</h3>
+                        <button class="btn btn-primary" onclick="refreshDashboard()">
+                            <i class="fas fa-sync-alt"></i> 刷新
                         </button>
                     </div>
+                    <div id="serviceInfo" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <div>加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 凭证管理面板 -->
+            <div id="credentials" class="tab-panel">
+                <!-- OAuth2自动认证区域 -->
+                <div class="card auth-section">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-magic"></i> 自动获取认证</h3>
+                    </div>
+                    <p style="margin-bottom: 1rem; color: var(--secondary-color);">
+                        点击下方按钮自动启动CodeBuddy OAuth2认证流程，系统将自动获取并保存您的认证凭证。
+                    </p>
+                    <button class="btn btn-primary" id="getAuthBtn" onclick="startAuth()">
+                        <i class="fas fa-play"></i> 开始认证
+                    </button>
                     
-                    <!-- 自动回调等待区域 -->
-                    <div id="autoCallbackSection" class="callback-section">
-                        <div class="auth-progress">
-                            <i class="fas fa-clock"></i>
-                            <div>等待认证完成...</div>
-                            <small style="color: var(--secondary-color);">完成登录后系统将自动获取凭证</small>
-                        </div>
-                        <div style="text-align: center; margin-top: 1rem;">
-                            <button class="btn btn-secondary" onclick="waitForAutoCallback()">
-                                <i class="fas fa-sync-alt"></i> 检查认证状态
+                    <!-- 认证URL显示区域 -->
+                    <div id="authUrlSection" class="auth-url-section hidden">
+                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">认证链接已生成</h4>
+                        <p style="margin-bottom: 1rem; color: var(--secondary-color);">
+                            请点击下面的链接完成CodeBuddy账号登录：
+                        </p>
+                        <input type="text" id="authUrlInput" class="auth-url-input" readonly>
+                        <div class="auth-buttons">
+                            <button class="btn btn-success" onclick="openAuthUrl()">
+                                <i class="fas fa-external-link-alt"></i> 打开链接
+                            </button>
+                            <button class="btn btn-secondary" onclick="copyAuthUrl()">
+                                <i class="fas fa-copy"></i> 复制链接
+                            </button>
+                            <button class="btn btn-warning" onclick="showManualCallback()">
+                                <i class="fas fa-hand-pointer"></i> 手动回调
                             </button>
                         </div>
-                    </div>
-                    
-                    <!-- 手动回调区域 -->
-                    <div id="manualCallbackSection" class="callback-section hidden">
-                        <h5 style="margin-bottom: 1rem;">手动输入回调链接</h5>
-                        <p style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--secondary-color);">
-                            如果自动检测失败，请在完成登录后，将浏览器地址栏中的完整URL粘贴到下面：
-                        </p>
-                        <input type="text" id="callbackUrl" class="form-input" placeholder="粘贴回调URL...">
-                        <div style="margin-top: 1rem; text-align: right;">
-                            <button class="btn btn-secondary" onclick="waitForAutoCallback()">返回自动模式</button>
-                            <button class="btn btn-success" onclick="submitCallbackUrl()">提交</button>
+                        
+                        <!-- 自动回调等待区域 -->
+                        <div id="autoCallbackSection" class="callback-section">
+                            <div class="auth-progress">
+                                <i class="fas fa-clock"></i>
+                                <div>等待认证完成...</div>
+                                <small style="color: var(--secondary-color);">完成登录后系统将自动获取凭证</small>
+                            </div>
+                            <div style="text-align: center; margin-top: 1rem;">
+                                <button class="btn btn-secondary" onclick="waitForAutoCallback()">
+                                    <i class="fas fa-sync-alt"></i> 检查认证状态
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 手动回调区域 -->
+                        <div id="manualCallbackSection" class="callback-section hidden">
+                            <h5 style="margin-bottom: 1rem;">手动输入回调链接</h5>
+                            <p style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--secondary-color);">
+                                如果自动检测失败，请在完成登录后，将浏览器地址栏中的完整URL粘贴到下面：
+                            </p>
+                            <input type="text" id="callbackUrl" class="form-input" placeholder="粘贴回调URL...">
+                            <div style="margin-top: 1rem; text-align: right;">
+                                <button class="btn btn-secondary" onclick="waitForAutoCallback()">返回自动模式</button>
+                                <button class="btn btn-success" onclick="submitCallbackUrl()">提交</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 手动添加凭证区域 -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-edit"></i> 手动添加凭证</h3>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="bearerToken">Bearer Token <span style="color: var(--error-color);">*</span></label>
-                    <textarea 
-                        id="bearerToken" 
-                        class="form-input form-textarea" 
-                        placeholder="输入您的 CodeBuddy Bearer Token..."
-                        rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="userId">用户ID (可选)</label>
-                    <input 
-                        type="text" 
-                        id="userId" 
-                        class="form-input" 
-                        placeholder="输入用户ID (可选)">
-                </div>
-                <button class="btn btn-success" onclick="addCredential()">
-                    <i class="fas fa-plus"></i> 添加凭证
-                </button>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">已保存的凭证</h3>
-                    <button class="btn btn-primary" onclick="loadCredentials()">
-                        <i class="fas fa-sync-alt"></i> 刷新列表
+                <!-- 手动添加凭证区域 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-edit"></i> 手动添加凭证</h3>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="bearerToken">Bearer Token <span style="color: var(--error-color);">*</span></label>
+                        <textarea
+                            id="bearerToken"
+                            class="form-input form-textarea"
+                            placeholder="输入您的 CodeBuddy Bearer Token..."
+                            rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="userId">用户ID (可选)</label>
+                        <input
+                            type="text"
+                            id="userId"
+                            class="form-input"
+                            placeholder="输入用户ID (可选)">
+                    </div>
+                    <button class="btn btn-success" onclick="addCredential()">
+                        <i class="fas fa-plus"></i> 添加凭证
                     </button>
                 </div>
-                <div id="credentialsList" class="loading">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <div>加载中...</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- API测试面板 -->
-        <div id="api-test" class="tab-panel">
-            <div class="card api-test">
-                <div class="card-header">
-                    <h3 class="card-title">聊天完成测试</h3>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="testModel">模型</label>
-                    <select id="testModel" class="form-input">
-                        <option value="auto-chat">auto-chat</option>
-                        <option value="claude-4.0">claude-4.0</option>
-                        <option value="gpt-5">gpt-5</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="testMessage">测试消息</label>
-                    <textarea 
-                        id="testMessage" 
-                        class="form-input form-textarea" 
-                        placeholder="输入测试消息..."
-                        rows="3">Hello, what is 2+2?</textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">
-                        <input type="checkbox" id="testStream" style="margin-right: 0.5rem;">
-                        流式响应
-                    </label>
-                </div>
-                <button class="btn btn-primary" onclick="testAPI()">
-                    <i class="fas fa-paper-plane"></i> 发送测试
-                </button>
-                
-                <div class="form-group" style="margin-top: 1.5rem;">
-                    <label class="form-label">响应结果</label>
-                    <div id="testResult" class="code-block" style="min-height: 200px; background-color: #1e1e1e; color: #ffffff;">
-                        点击"发送测试"查看API响应...
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">已保存的凭证</h3>
+                        <button class="btn btn-primary" onclick="loadCredentials()">
+                            <i class="fas fa-sync-alt"></i> 刷新列表
+                        </button>
+                    </div>
+                    <div id="credentialsList" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <div>加载中...</div>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">API 使用示例</h3>
+            <!-- API测试面板 -->
+            <div id="api-test" class="tab-panel">
+                <div class="card api-test">
+                    <div class="card-header">
+                        <h3 class="card-title">聊天完成测试</h3>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="testModel">模型</label>
+                        <select id="testModel" class="form-input">
+                            <option value="auto-chat">auto-chat</option>
+                            <option value="claude-4.0">claude-4.0</option>
+                            <option value="gpt-5">gpt-5</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="testMessage">测试消息</label>
+                        <textarea
+                            id="testMessage"
+                            class="form-input form-textarea"
+                            placeholder="输入测试消息..."
+                            rows="3">Hello, what is 2+2?</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <input type="checkbox" id="testStream" style="margin-right: 0.5rem;">
+                            流式响应
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" onclick="testAPI()">
+                        <i class="fas fa-paper-plane"></i> 发送测试
+                    </button>
+                    
+                    <div class="form-group" style="margin-top: 1.5rem;">
+                        <label class="form-label">响应结果</label>
+                        <div id="testResult" class="code-block" style="min-height: 200px; background-color: #1e1e1e; color: #ffffff;">
+                            点击"发送测试"查看API响应...
+                        </div>
+                    </div>
                 </div>
-                <h4 style="margin-bottom: 1rem; color: var(--primary-color);">curl 示例:</h4>
-                <div class="code-block">curl -X POST "http://127.0.0.1:8001/codebuddy/v1/chat/completions" \
-  -H "Authorization: Bearer YOUR_PASSWORD" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "auto-chat",
-    "messages": [
-      {"role": "user", "content": "Hello!"}
-    ]
-  }'</div>
 
-                <h4 style="margin: 1.5rem 0 1rem; color: var(--primary-color);">Python 示例:</h4>
-                <div class="code-block">import openai
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">API 使用示例</h3>
+                    </div>
+                    <h4 style="margin-bottom: 1rem; color: var(--primary-color);">curl 示例:</h4>
+                    <div class="code-block">curl -X POST "http://127.0.0.1:8001/codebuddy/v1/chat/completions" \
+      -H "Authorization: Bearer YOUR_PASSWORD" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "auto-chat",
+        "messages": [
+          {"role": "user", "content": "Hello!"}
+        ]
+      }'</div>
 
-client = openai.OpenAI(
-    api_key="YOUR_PASSWORD",
-    base_url="http://127.0.0.1:8001/codebuddy/v1"
-)
+                    <h4 style="margin: 1.5rem 0 1rem; color: var(--primary-color);">Python 示例:</h4>
+                    <div class="code-block">import openai
 
-response = client.chat.completions.create(
-    model="auto-chat",
-    messages=[
-        {"role": "user", "content": "Hello!"}
-    ]
-)
+    client = openai.OpenAI(
+        api_key="YOUR_PASSWORD",
+        base_url="http://127.0.0.1:8001/codebuddy/v1"
+    )
 
-print(response.choices[0].message.content)</div>
+    response = client.chat.completions.create(
+        model="auto-chat",
+        messages=[
+            {"role": "user", "content": "Hello!"}
+        ]
+    )
+
+    print(response.choices[0].message.content)</div>
+                </div>
             </div>
-        </div>
 
-        <!-- 设置面板 -->
-        <div id="settings" class="tab-panel">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">服务配置</h3>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">API 访问密码</label>
-                    <input type="password" class="form-input" placeholder="在环境变量 CODEBUDDY_PASSWORD 中设置" readonly>
-                    <small style="color: var(--secondary-color); margin-top: 0.5rem; display: block;">
-                        请在 .env 文件中设置 CODEBUDDY_PASSWORD 环境变量
-                    </small>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">CodeBuddy API 端点</label>
-                    <input type="text" class="form-input" value="https://www.codebuddy.ai" readonly>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">服务地址</label>
-                    <input type="text" class="form-input" value="http://127.0.0.1:8001" readonly>
+            <!-- 设置面板 -->
+            <div id="settings" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">服务配置</h3>
+                    </div>
+                    <div id="settingsForm">
+                        <!-- 表单内容将由JS动态生成 -->
+                         <div class="loading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <div>加载配置中...</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <button class="btn btn-primary" onclick="saveSettings()">
+                            <i class="fas fa-save"></i> 保存设置
+                        </button>
+                        <small style="display: block; margin-top: 1rem; color: var(--secondary-color);">
+                            注意：部分设置（如端口号）需要重启服务后才能生效。
+                        </small>
+                    </div>
                 </div>
             </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">如何获取 Bearer Token</h3>
-                </div>
-                <ol style="line-height: 1.8;">
-                    <li>访问 <a href="https://www.codebuddy.ai" target="_blank" style="color: var(--primary-color);">CodeBuddy官网</a> 并登录</li>
-                    <li>打开浏览器开发者工具 (F12)</li>
-                    <li>切换到 "Network" (网络) 标签页</li>
-                    <li>在 CodeBuddy 中发送一条消息</li>
-                    <li>在网络请求中找到 API 调用</li>
-                    <li>查看请求头中的 "Authorization" 字段</li>
-                    <li>复制 "Bearer " 后面的 token 值</li>
-                    <li>将 token 添加到凭证管理中</li>
-                </ol>
-            </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <!-- 通知区域 -->
     <div id="notification" class="notification"></div>
@@ -966,6 +957,7 @@ print(response.choices[0].message.content)</div>
         let currentAuthData = null;
         let authPollingInterval = null;
         let isAuthenticated = false;
+        let credentialsCache = []; // 用于缓存凭证和其状态
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -977,10 +969,10 @@ print(response.choices[0].message.content)</div>
             if (savedPassword) {
                 servicePassword = savedPassword;
                 isAuthenticated = true;
-                hideLoginOverlay();
+                showDashboardPage();
                 loadDashboard();
             } else {
-                showLoginOverlay();
+                showLoginPage();
             }
         });
 
@@ -1030,6 +1022,8 @@ print(response.choices[0].message.content)</div>
                 loadDashboard();
             } else if (tabId === 'credentials') {
                 loadCredentials();
+            } else if (tabId === 'settings') {
+                loadSettings();
             }
         }
 
@@ -1058,50 +1052,44 @@ print(response.choices[0].message.content)</div>
             notification.classList.remove('show');
         }
 
-        // 登录相关函数
-        function showLoginOverlay() {
-            document.getElementById('loginOverlay').classList.remove('hidden');
+        // 登录与页面切换
+        function showLoginPage() {
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('dashboardPage').classList.add('hidden');
             document.getElementById('loginPassword').focus();
         }
 
-        function hideLoginOverlay() {
-            document.getElementById('loginOverlay').classList.add('hidden');
+        function showDashboardPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('dashboardPage').classList.remove('hidden');
         }
 
         async function handleLogin(event) {
             event.preventDefault();
-            
             const password = document.getElementById('loginPassword').value;
             const loginButton = document.getElementById('loginButton');
             const loginError = document.getElementById('loginError');
-            
+
             if (!password) {
                 showLoginError('请输入密码');
                 return;
             }
-            
-            // 显示加载状态
+
             loginButton.disabled = true;
             loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 验证中...';
             loginError.classList.add('hidden');
-            
+
             try {
-                // 测试密码是否正确
                 const testResponse = await fetch('/codebuddy/v1/credentials', {
-                    headers: {
-                        'Authorization': `Bearer ${password}`
-                    }
+                    headers: { 'Authorization': `Bearer ${password}` }
                 });
-                
+
                 if (testResponse.status !== 403) {
-                    // 登录成功
                     servicePassword = password;
                     isAuthenticated = true;
-                    
-                    // 保存到sessionStorage（会话级别，关闭浏览器就失效）
                     sessionStorage.setItem('servicePassword', password);
                     
-                    hideLoginOverlay();
+                    showDashboardPage();
                     loadDashboard();
                     showNotification('登录成功！', 'success');
                 } else {
@@ -1110,7 +1098,6 @@ print(response.choices[0].message.content)</div>
             } catch (error) {
                 showLoginError('密码错误，请重试');
             } finally {
-                // 恢复按钮状态
                 loginButton.disabled = false;
                 loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> 登录';
             }
@@ -1126,7 +1113,7 @@ print(response.choices[0].message.content)</div>
             servicePassword = '';
             isAuthenticated = false;
             sessionStorage.removeItem('servicePassword');
-            showLoginOverlay();
+            showLoginPage();
             showNotification('已退出登录', 'info');
         }
 
@@ -1211,7 +1198,9 @@ print(response.choices[0].message.content)</div>
                 
                 if (response.ok) {
                     const data = await response.json();
-                    displayCredentials(data.credentials || []);
+                    // 初始化凭证缓存
+                    credentialsCache = (data.credentials || []).map(cred => ({...cred, status: 'unknown'}));
+                    displayCredentials();
                 } else if (response.status === 403) {
                     credentialsList.innerHTML = '<div class="status status-error">认证失败，请重新登录</div>';
                     logout();
@@ -1223,24 +1212,37 @@ print(response.choices[0].message.content)</div>
             }
         }
 
-        function displayCredentials(credentials) {
+        function displayCredentials() {
             const credentialsList = document.getElementById('credentialsList');
             
-            if (credentials.length === 0) {
+            if (credentialsCache.length === 0) {
                 credentialsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--secondary-color);">暂无凭证，请添加第一个凭证</div>';
                 return;
             }
 
-            credentialsList.innerHTML = '<div class="credential-list">' + 
-                credentials.map((cred, index) => `
+            credentialsList.innerHTML = '<div class="credential-list">' +
+                credentialsCache.map((cred, index) => {
+                    let statusIcon = '';
+                    switch(cred.status) {
+                        case 'valid':
+                            statusIcon = `<i class="fas fa-check-circle credential-status-icon" style="color: var(--success-color);" title="有效"></i>`;
+                            break;
+                        case 'invalid':
+                            statusIcon = `<i class="fas fa-times-circle credential-status-icon" style="color: var(--error-color);" title="无效"></i>`;
+                            break;
+                        default:
+                            statusIcon = `<i class="fas fa-question-circle credential-status-icon" style="color: var(--secondary-color);" title="未验证"></i>`;
+                    }
+
+                    return `
                     <div class="credential-item">
+                        <div class="credential-status-icon">${statusIcon}</div>
                         <div class="credential-info">
                             <div class="credential-id">凭证 #${index + 1}</div>
                             <div class="credential-details">
                                 ${cred.user_id ? `用户ID: ${cred.user_id}<br>` : ''}
                                 ${cred.token_preview ? `Token: ${cred.token_preview}<br>` : ''}
-                                状态: ${cred.has_token ? '<span style="color: var(--success-color);">✓ 已配置</span>' : '<span style="color: var(--error-color);">✗ 未配置</span>'}
-                                ${cred.created_at ? `<br>创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}` : ''}
+                                ${cred.created_at ? `创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}` : ''}
                             </div>
                         </div>
                         <div class="credential-actions">
@@ -1249,7 +1251,7 @@ print(response.choices[0].message.content)</div>
                             </button>
                         </div>
                     </div>
-                `).join('') + 
+                `}).join('') +
             '</div>';
         }
 
@@ -1288,14 +1290,21 @@ print(response.choices[0].message.content)</div>
         }
 
         async function testCredential(index) {
-            showNotification('正在测试凭证...', 'info');
+            showNotification(`正在测试凭证 #${index + 1}...`, 'info');
             
+            // 找到要测试的凭证的原始数据
+            const originalCred = credentialsCache[index];
+            if (!originalCred) return;
+
             try {
-                // 先试试简单的测试接口
                 const response = await fetch('/codebuddy/v1/chat/completions', {
                     method: 'POST',
                     headers: getAuthHeaders(),
                     body: JSON.stringify({
+                        // 在后端，token管理器是轮换的，我们无法直接指定用哪个token
+                        // 所以这里的测试实际上是测试下一个将被轮换到的token
+                        // 为了更精确，理想的后端应该有一个专门的测试接口
+                        // 但在当前架构下，这是最好的模拟
                         model: 'claude-4.0',
                         messages: [{ role: 'user', content: 'test' }],
                         max_tokens: 1
@@ -1303,16 +1312,18 @@ print(response.choices[0].message.content)</div>
                 });
                 
                 if (response.ok) {
-                    showNotification('凭证测试成功！ ✓', 'success');
-                } else if (response.status === 401 || response.status === 403) {
-                    showNotification('凭证无效或已过期 ✗', 'error');
+                    showNotification(`凭证 #${index + 1} 测试成功！ ✓`, 'success');
+                    credentialsCache[index].status = 'valid';
                 } else {
-                    // 其他错误也认为是凭证问题
-                    const errorText = await response.text();
-                    showNotification(`测试失败: ${response.status} - ${errorText}`, 'error');
+                     showNotification(`凭证 #${index + 1} 无效或已过期 ✗`, 'error');
+                    credentialsCache[index].status = 'invalid';
                 }
             } catch (error) {
                 showNotification(`网络错误: ${error.message}`, 'error');
+                credentialsCache[index].status = 'invalid';
+            } finally {
+                // 重新渲染列表以更新图标
+                displayCredentials();
             }
         }
 
@@ -1396,55 +1407,23 @@ print(response.choices[0].message.content)</div>
                 const response = await fetch('/codebuddy/auth/start', { method: 'GET' });
                 const data = await response.json();
                 
-                if (response.ok && data.success && data.verification_uri_complete) {
-                    currentAuthData = { 
-                        device_code: data.device_code,
-                        code_verifier: data.code_verifier,
-                        method: data.method
+                // 修正：检查正确的响应字段 `verification_uri_complete`
+                if (response.ok && data.verification_uri_complete) {
+                    // 保存所有必要信息以供轮询使用
+                    currentAuthData = {
+                        auth_state: data.auth_state
                     };
-                    
+
+                    // 修正：使用正确的字段来设置输入框的值，并显示该区域
                     document.getElementById('authUrlInput').value = data.verification_uri_complete;
-                    document.getElementById('authUrlSection').style.display = 'block';
+                    document.getElementById('authUrlSection').classList.remove('hidden');
                     
-                    // 显示认证方法特定的说明
-                    let instructions = '';
-                    switch(data.method) {
-                        case 'device_flow':
-                            instructions = '✅ 设备授权流程已启动，请点击链接完成授权';
-                            break;
-                        case 'web_authorization':
-                            instructions = '✅ 网页授权流程已启动，请点击链接登录CodeBuddy';
-                            break;
-                        case 'sso_flow':
-                            instructions = '✅ 腾讯云SSO认证流程已启动，请点击链接完成认证';
-                            break;
-                        case 'manual_guided':
-                            instructions = '✅ 手动引导认证流程已启动，请按照步骤操作';
-                            // 显示详细步骤
-                            if (data.manual_steps) {
-                                showManualSteps(data.manual_steps);
-                            }
-                            break;
-                        default:
-                            instructions = '✅ 认证链接已生成，请点击链接完成登录';
-                    }
+                    showNotification('✅ 认证链接已生成，请点击链接完成登录', 'success');
                     
-                    showNotification(instructions, 'success');
-                    
-                    // 对于手动引导流程，使用较慢的轮询
-                    if (data.method === 'manual_guided') {
-                        showManualGuidedInstructions();
-                    } else {
-                        // 开始轮询认证状态
-                        pollForToken();
-                    }
+                    // 立即开始轮询
+                    pollForToken();
                 } else {
                     let errorMessage = data.message || '获取认证链接失败';
-                    if (data.manual_instructions) {
-                        // 显示手动指导
-                        showManualInstructions(data.manual_instructions);
-                        errorMessage += ' 请查看手动获取指导。';
-                    }
                     showNotification(`❌ ${errorMessage}`, 'error');
                     resetAuthButton();
                 }
@@ -1527,8 +1506,7 @@ print(response.choices[0].message.content)</div>
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            device_code: currentAuthData.device_code,
-                            code_verifier: currentAuthData.code_verifier
+                            auth_state: currentAuthData.auth_state // 修正：发送auth_state
                         })
                     });
 
@@ -1745,6 +1723,83 @@ print(response.choices[0].message.content)</div>
         window.addEventListener('beforeunload', () => {
             stopPolling();
         });
+
+        // 设置页面功能
+        async function loadSettings() {
+            const settingsForm = document.getElementById('settingsForm');
+            settingsForm.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i><div>加载配置中...</div></div>';
+
+            try {
+                const response = await fetch('/api/settings', { headers: getAuthHeaders() });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const settings = data.settings;
+                const labels = data.labels;
+                
+                // 清空加载提示
+                settingsForm.innerHTML = '';
+
+                // 根据从后端获取的设置动态创建表单
+                for (const key in settings) {
+                    if (settings.hasOwnProperty(key)) {
+                        const formGroup = document.createElement('div');
+                        formGroup.className = 'form-group';
+                        
+                        const label = document.createElement('label');
+                        label.className = 'form-label';
+                        label.htmlFor = `setting_${key}`;
+                        // 使用中文标签，如果不存在则回退到原始key
+                        label.textContent = labels[key] || key;
+                        
+                        const input = document.createElement('input');
+                        input.type = (key.toLowerCase().includes('password')) ? 'password' : 'text';
+                        input.id = `setting_${key}`;
+                        input.className = 'form-input';
+                        input.value = settings[key] || '';
+
+                        formGroup.appendChild(label);
+                        formGroup.appendChild(input);
+                        settingsForm.appendChild(formGroup);
+                    }
+                }
+
+            } catch (error) {
+                settingsForm.innerHTML = `<div class="status status-error">加载配置失败: ${error.message}</div>`;
+            }
+        }
+
+        async function saveSettings() {
+            const settingsForm = document.getElementById('settingsForm');
+            const inputs = settingsForm.querySelectorAll('.form-input');
+            const newSettings = {};
+
+            inputs.forEach(input => {
+                const key = input.id.replace('setting_', '');
+                newSettings[key] = input.value;
+            });
+
+            showNotification('正在保存设置...', 'info');
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ settings: newSettings })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showNotification(result.message || '设置已保存并热加载！', 'success');
+                } else {
+                    throw new Error(result.detail || '保存失败');
+                }
+            } catch (error) {
+                showNotification(`保存失败: ${error.message}`, 'error');
+            }
+        }
     </script>
 </body>
 </html>

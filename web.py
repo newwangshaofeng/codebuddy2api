@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Import the routers
 from src.codebuddy_router import router as codebuddy_router
 from src.codebuddy_auth_router import router as codebuddy_auth_router
+from src.settings_router import router as settings_router
 from src.frontend_router import router as frontend_router
 
 from config import get_server_host, get_server_port, get_log_level
@@ -68,6 +69,13 @@ app.include_router(
     tags=["CodeBuddy Compatible API"]
 )
 
+# 挂载设置路由
+app.include_router(
+    settings_router,
+    prefix="/api",
+    tags=["Settings Management"]
+)
+
 # 健康检查端点
 @app.get("/health")
 async def health_check():
@@ -88,7 +96,9 @@ async def root():
             "credentials": "/codebuddy/v1/credentials",
             "auth_start": "/codebuddy/auth/start",
             "auth_poll": "/codebuddy/auth/poll",
-            "auth_callback": "/codebuddy/auth/callback"
+            "auth_callback": "/codebuddy/auth/callback",
+            "get_settings": "/api/settings",
+            "save_settings": "/api/settings"
         }
     }
 
@@ -120,7 +130,7 @@ if __name__ == "__main__":
 
     config = Config()
     config.bind = [f"{host}:{port}"]
-    config.accesslog = "-"
+    config.accesslog = None
     config.errorlog = "-"
     config.loglevel = "INFO"
     config.use_colors = True

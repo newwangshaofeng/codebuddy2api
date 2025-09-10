@@ -297,3 +297,47 @@ async def list_v1_models(_token: str = Depends(authenticate)):
     except Exception as e:
         logger.error(f"获取V1模型列表错误: {e}")
         raise HTTPException(status_code=500, detail="获取模型列表失败")
+
+@router.get("/v1/credentials", summary="List all available credentials")
+async def list_credentials(_token: str = Depends(authenticate)):
+    """列出所有可用凭证的简略信息"""
+    credentials = codebuddy_token_manager.get_all_credentials()
+    safe_credentials = []
+    for i, cred in enumerate(credentials):
+        bearer_token = cred.get("bearer_token", "")
+        safe_cred = {
+            "index": i,
+            "user_id": cred.get("user_id", "unknown"),
+            "created_at": cred.get("created_at", 0),
+            "has_token": bool(bearer_token),
+            "token_preview": f"{bearer_token[:10]}...{bearer_token[-4:]}" if bearer_token and len(bearer_token) > 14 else "Invalid Token"
+        }
+        safe_credentials.append(safe_cred)
+    
+    return {"credentials": safe_credentials}
+
+
+@router.post("/v1/credentials", summary="Add a new credential")
+async def add_credential(
+    request: Request,
+    _token: str = Depends(authenticate)
+):
+    """添加一个新的认证凭证"""
+    try:
+        data = await request.json()
+        bearer_token = data.get("bearer_token")
+        user_id = data.get("user_id")
+        filename = data.get("filename")
+
+        if not bearer_token:
+            raise HTTPException(status_code=422, detail="bearer_token is required")
+
+        success = codebuddy_token_manager.add_credential(bearer_token, user_id, filename)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save credential file")
+        
+        return {"message": "Credential added successfully"}
+
+    except Exception as e:
+        logger.error(f"添加凭证失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -59,26 +59,45 @@ def generate_auth_state() -> str:
     random_part = secrets.token_hex(16)
     return f"{random_part}_{timestamp}"
 
-def get_codebuddy_headers() -> Dict[str, str]:
-    """获取CodeBuddy API所需的标准请求头"""
+def get_auth_start_headers() -> Dict[str, str]:
+    """生成启动认证(/state)所需的请求头"""
     request_id = str(uuid.uuid4()).replace('-', '')
     return {
+        'Host': 'www.codebuddy.ai',
+        'Accept': 'application/json, text/plain, */*',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Domain': 'www.codebuddy.ai',
+        'X-No-Authorization': 'true',
+        'X-No-User-Id': 'true',
+        'X-No-Enterprise-Id': 'true',
+        'X-No-Department-Info': 'true',
+        'User-Agent': 'CLI/1.0.8 CodeBuddy/1.0.8',
+        'X-Product': 'SaaS',
+        'X-Request-ID': request_id,
+    }
+
+def get_auth_poll_headers() -> Dict[str, str]:
+    """生成轮询认证(/token)所需的请求头"""
+    request_id = str(uuid.uuid4()).replace('-', '')
+    span_id = secrets.token_hex(8)
+    return {
+        'Host': 'www.codebuddy.ai',
         'Accept': 'application/json, text/plain, */*',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Request-ID': request_id,
-        'b3': f'{request_id}-{secrets.token_hex(8)}-1-',
+        'b3': f'{request_id}-{span_id}-1-',
         'X-B3-TraceId': request_id,
         'X-B3-ParentSpanId': '',
-        'X-B3-SpanId': secrets.token_hex(8),
+        'X-B3-SpanId': span_id,
         'X-B3-Sampled': '1',
         'X-No-Authorization': 'true',
         'X-No-User-Id': 'true',
         'X-No-Enterprise-Id': 'true',
         'X-No-Department-Info': 'true',
         'X-Domain': 'www.codebuddy.ai',
-        'User-Agent': 'CLI/1.0.7 CodeBuddy/1.0.7',
+        'User-Agent': 'CLI/1.0.8 CodeBuddy/1.0.8',
         'X-Product': 'SaaS',
-        'Host': 'www.codebuddy.ai'
     }
 
 async def start_codebuddy_auth() -> Dict[str, Any]:
@@ -86,7 +105,7 @@ async def start_codebuddy_auth() -> Dict[str, Any]:
     try:
         logger.info("启动CodeBuddy认证流程...")
         
-        headers = get_codebuddy_headers()
+        headers = get_auth_start_headers()
         
         # 调用 /v2/plugin/auth/state 获取认证状态和URL
         async with httpx.AsyncClient(verify=False) as client:
@@ -137,7 +156,7 @@ async def start_codebuddy_auth() -> Dict[str, Any]:
 async def poll_codebuddy_auth_status(auth_state: str) -> Dict[str, Any]:
     """轮询CodeBuddy认证状态"""
     try:
-        headers = get_codebuddy_headers()
+        headers = get_auth_poll_headers()
         url = f"{CODEBUDDY_AUTH_TOKEN_ENDPOINT}?state={auth_state}"
         
         async with httpx.AsyncClient(verify=False) as client:
@@ -196,7 +215,7 @@ async def poll_codebuddy_auth_status(auth_state: str) -> Dict[str, Any]:
 async def save_codebuddy_token(token_data: Dict[str, Any]) -> bool:
     """保存CodeBuddy token到文件"""
     try:
-        from codebuddy_token_manager import codebuddy_token_manager
+        from .codebuddy_token_manager import codebuddy_token_manager
         
         # 添加创建时间
         token_data["created_at"] = int(time.time())
@@ -265,7 +284,7 @@ async def poll_for_token(
     auth_state: str = Body(None, embed=True)
 ):
     """轮询CodeBuddy token端点"""
-    from codebuddy_token_manager import codebuddy_token_manager
+    from .codebuddy_token_manager import codebuddy_token_manager
     
     # 如果有auth_state，说明是真实的CodeBuddy认证流程
     if auth_state:

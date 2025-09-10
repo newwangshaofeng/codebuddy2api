@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # --- Private State ---
 _config_cache: Dict[str, Any] = {}
-_CONFIG_JSON_PATH = 'config.json'  # Use a simple relative path from the project root
+_CONFIG_JSON_PATH = 'config/config.json'  # Use a path inside a directory
 
 _DEFAULT_CONFIG = {
     "CODEBUDDY_HOST": "127.0.0.1",
@@ -73,7 +73,8 @@ def _get_config_value(key: str) -> Any:
 def _update_config_value(key: str, value: Any):
     global _config_cache
     _config_cache[key] = value
-    logger.info(f"Hot-reloaded setting '{key}' to new value.")
+    # Downgrade to debug to avoid verbose logging in production
+    logger.debug(f"Hot-reloaded setting '{key}' to new value.")
 
 
 def save_config_to_json():
@@ -83,6 +84,12 @@ def save_config_to_json():
     This will create the file if it doesn't exist.
     """
     try:
+        # Ensure the directory exists before writing the file
+        config_dir = os.path.dirname(_CONFIG_JSON_PATH)
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+            logger.info(f"Created config directory at {config_dir}")
+
         with open(_CONFIG_JSON_PATH, 'w', encoding='utf-8') as f:
             # Only save keys that are part of the original default config
             # to avoid saving runtime-only variables.

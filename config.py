@@ -26,7 +26,8 @@ _DEFAULT_CONFIG = {
     "CODEBUDDY_API_ENDPOINT": "https://www.codebuddy.ai",
     "CODEBUDDY_CREDS_DIR": ".codebuddy_creds",
     "CODEBUDDY_LOG_LEVEL": "INFO",
-    "CODEBUDDY_MODELS": "claude-4.0,claude-3.7,gpt-5,gpt-5-mini,gpt-5-nano,o4-mini,gemini-2.5-flash,gemini-2.5-pro,auto-chat"
+    "CODEBUDDY_MODELS": "claude-4.0,claude-3.7,gpt-5,gpt-5-mini,gpt-5-nano,o4-mini,gemini-2.5-flash,gemini-2.5-pro,auto-chat",
+    "CODEBUDDY_ROTATION_COUNT": 1
 }
 
 # --- Core Functions ---
@@ -126,6 +127,9 @@ def get_log_level() -> str:
 def get_available_models() -> list:
     models_str = str(_get_config_value("CODEBUDDY_MODELS"))
     return [model.strip() for model in models_str.split(",")]
+
+def get_rotation_count() -> int:
+    return int(_get_config_value("CODEBUDDY_ROTATION_COUNT"))
 
 # --- Public Setter for Hot-Reload ---
 

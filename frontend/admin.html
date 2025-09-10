@@ -651,6 +651,42 @@
             opacity: 0.9;
             font-size: 0.9rem;
         }
+
+        /* Usage Table Styles */
+        .usage-table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .usage-table th, .usage-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        body.dark .usage-table th, body.dark .usage-table td {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .usage-table th {
+            font-weight: 600;
+            background-color: var(--background-light);
+        }
+        
+        body.dark .usage-table th {
+            background-color: var(--background-dark);
+        }
+
+        .usage-table td:last-child {
+            text-align: right;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -733,14 +769,42 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="card-title">服务信息</h3>
-                        <button class="btn btn-primary" onclick="refreshDashboard()">
+                        <h3 class="card-title"><i class="fas fa-chart-bar"></i> 模型使用统计</h3>
+                         <button class="btn btn-primary" onclick="refreshDashboard()">
                             <i class="fas fa-sync-alt"></i> 刷新
                         </button>
                     </div>
-                    <div id="serviceInfo" class="loading">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <div>加载中...</div>
+                    <div class="usage-table-container">
+                        <table class="usage-table">
+                            <thead>
+                                <tr>
+                                    <th>模型名称</th>
+                                    <th style="text-align: right;">使用次数</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modelUsageTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title"><i class="fas fa-key"></i> 凭证使用统计</h3>
+                    </div>
+                    <div class="usage-table-container">
+                        <table class="usage-table">
+                            <thead>
+                                <tr>
+                                    <th>凭证文件</th>
+                                    <th style="text-align: right;">使用次数</th>
+                                </tr>
+                            </thead>
+                            <tbody id="credentialUsageTableBody">
+                                <!-- JS will populate this -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -1149,10 +1213,26 @@
                 if (credResponse.ok) {
                     const credData = await credResponse.json();
                     document.getElementById('totalCredentials').textContent = credData.credentials?.length || 0;
+                } else {
+                    document.getElementById('totalCredentials').textContent = 'N/A';
                 }
             } catch (error) {
                 console.error('Failed to load credentials count:', error);
+                document.getElementById('totalCredentials').textContent = '错误';
             }
+
+            document.getElementById('apiEndpoint').textContent = window.location.origin + '/codebuddy/v1';
+
+           // 加载使用统计
+          try {
+              const statsResponse = await fetch('/api/stats', { headers: getAuthHeaders() });
+              if (statsResponse.ok) {
+                  const statsData = await statsResponse.json();
+                  updateUsageTables(statsData);
+              }
+          } catch (error) {
+              console.error('Failed to load usage stats:', error);
+          }
 
             document.getElementById('apiEndpoint').textContent = window.location.origin + '/codebuddy/v1';
         }
@@ -1800,6 +1880,39 @@
                 showNotification(`保存失败: ${error.message}`, 'error');
             }
         }
+
+       function updateUsageTables(stats) {
+           const { model_usage, credential_usage } = stats;
+           const modelTableBody = document.getElementById('modelUsageTableBody');
+           const credentialTableBody = document.getElementById('credentialUsageTableBody');
+
+           // Clear previous data
+           modelTableBody.innerHTML = '';
+           credentialTableBody.innerHTML = '';
+
+           // Populate Model Usage Table
+           if (model_usage && Object.keys(model_usage).length > 0) {
+               const sortedModels = Object.entries(model_usage).sort((a, b) => b[1] - a[1]);
+               sortedModels.forEach(([model, count]) => {
+                   const row = `<tr><td>${model}</td><td>${count}</td></tr>`;
+                   modelTableBody.innerHTML += row;
+               });
+           } else {
+               modelTableBody.innerHTML = '<tr><td colspan="2" style="text-align: center;">暂无模型使用数据</td></tr>';
+           }
+
+           // Populate Credential Usage Table
+           if (credential_usage && Object.keys(credential_usage).length > 0) {
+               const sortedCredentials = Object.entries(credential_usage).sort((a, b) => b[1] - a[1]);
+               sortedCredentials.forEach(([path, count]) => {
+                   const filename = path.split('/').pop().split('\\').pop();
+                   const row = `<tr><td>${filename}</td><td>${count}</td></tr>`;
+                   credentialTableBody.innerHTML += row;
+               });
+           } else {
+               credentialTableBody.innerHTML = '<tr><td colspan="2" style="text-align: center;">暂无凭证使用数据</td></tr>';
+           }
+       }
     </script>
 </body>
 </html>

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from .auth import authenticate
 from .codebuddy_api_client import codebuddy_api_client
 from .codebuddy_token_manager import codebuddy_token_manager
+from .usage_stats_manager import usage_stats_manager
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,11 @@ async def chat_completions(
         
         # 完全透传请求体，但需要处理一些 CodeBuddy 的特殊要求
         payload = request_body.copy()
+        
+        # Record model usage stats
+        model_name = payload.get("model", "unknown")
+        usage_stats_manager.record_model_usage(model_name)
+        
         payload["stream"] = True  # CodeBuddy 只支持流式请求
         
         # 处理消息长度要求：CodeBuddy要求至少2条消息
@@ -267,14 +273,15 @@ async def chat_completions(
 async def list_v1_models(_token: str = Depends(authenticate)):
     """获取CodeBuddy V1模型列表"""
     try:
-        # 获取凭证
-        credential = codebuddy_token_manager.get_next_credential()
-        if not credential:
-            raise HTTPException(status_code=401, detail="没有可用的CodeBuddy凭证")
+        # NOTE: 此端点不再消耗凭证，因为它只返回一个静态列表。
+        # 只需要服务级别的认证即可。
+        # credential = codebuddy_token_manager.get_next_credential()
+        # if not credential:
+        #     raise HTTPException(status_code=401, detail="没有可用的CodeBuddy凭证")
         
         models = [
             "claude-4.0",
-            "claude-3.7", 
+            "claude-3.7",
             "gpt-5",
             "gpt-5-mini",
             "gpt-5-nano",

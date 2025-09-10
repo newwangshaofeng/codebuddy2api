@@ -7,6 +7,7 @@ import json
 import time
 import logging
 from typing import Dict, Optional, List
+from .usage_stats_manager import usage_stats_manager
 
 logger = logging.getLogger(__name__)
 
@@ -16,12 +17,13 @@ class CodeBuddyTokenManager:
     
     def __init__(self, creds_dir=None):
         if creds_dir is None:
-            from config import get_codebuddy_creds_dir
+            from config import get_codebuddy_creds_dir, get_rotation_count
             creds_dir = get_codebuddy_creds_dir()
         
         self.creds_dir = os.path.join(os.path.dirname(__file__), '..', creds_dir)
         self.credentials = []
-        self.current_index = -1
+        self.current_index = 0  # Start from the first credential
+        self.usage_count = 0    # Counter for the current credential usage
         self.load_all_tokens()
     
     def load_all_tokens(self):
@@ -55,14 +57,36 @@ class CodeBuddyTokenManager:
         logger.info(f"Loaded a total of {len(self.credentials)} CodeBuddy credentials.")
     
     def get_next_credential(self) -> Optional[Dict]:
-        """获取下一个可用的凭证"""
+        """获取下一个可用的凭证，根据轮换策略"""
+        from config import get_rotation_count
+
         if not self.credentials:
             return None
         
-        self.current_index = (self.current_index + 1) % len(self.credentials)
+        # 如果当前索引无效（例如，在加载后删除了所有凭证），则重置
+        if self.current_index >= len(self.credentials):
+            self.current_index = 0
+            self.usage_count = 0
+
+        rotation_count = get_rotation_count()
+
+        # 检查是否需要轮换
+        if self.usage_count >= rotation_count:
+            self.current_index = (self.current_index + 1) % len(self.credentials)
+            self.usage_count = 0  # 重置计数器
+            logger.info("Credential rotation triggered.")
+
         credential = self.credentials[self.current_index]
+        self.usage_count += 1
         
-        logger.info(f"Using credential: {os.path.basename(credential['file_path'])}")
+        # Record usage stats
+        credential_filename = os.path.basename(credential['file_path'])
+        usage_stats_manager.record_credential_usage(credential_filename)
+        
+        logger.info(
+            f"Using credential: {credential_filename} "
+            f"(Usage: {self.usage_count}/{rotation_count})"
+        )
         return credential['data']
     
     def get_all_credentials(self) -> List[Dict]:

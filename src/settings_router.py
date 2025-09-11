@@ -23,7 +23,7 @@ SETTING_LABELS = {
     "CODEBUDDY_CREDS_DIR": "凭证文件目录",
     "CODEBUDDY_LOG_LEVEL": "日志级别",
     "CODEBUDDY_MODELS": "可用模型列表 (逗号分隔)",
-    "CODEBUDDY_ROTATION_COUNT": "凭证轮换频率 (N次请求/凭证)"
+    "CODEBUDDY_ROTATION_COUNT": "凭证轮换频率 (N次请求/凭证，设为0关闭轮换)"
 }
 
 class Settings(BaseModel):

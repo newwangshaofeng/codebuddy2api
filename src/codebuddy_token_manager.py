@@ -24,6 +24,7 @@ class CodeBuddyTokenManager:
         self.credentials = []
         self.current_index = 0  # Start from the first credential
         self.usage_count = 0    # Counter for the current credential usage
+        self.manual_selected_index = None  # 手动选择的凭证索引
         self.load_all_tokens()
     
     def load_all_tokens(self):
@@ -69,8 +70,24 @@ class CodeBuddyTokenManager:
             self.usage_count = 0
 
         rotation_count = get_rotation_count()
+        
+        # 如果有手动选择的凭证，优先使用
+        if self.manual_selected_index is not None and 0 <= self.manual_selected_index < len(self.credentials):
+            credential = self.credentials[self.manual_selected_index]
+            credential_filename = os.path.basename(credential['file_path'])
+            usage_stats_manager.record_credential_usage(credential_filename)
+            logger.info(f"Using manually selected credential: {credential_filename}")
+            return credential['data']
+        
+        # 如果轮换次数设置为0，关闭轮换，只使用当前凭证
+        if rotation_count == 0:
+            credential = self.credentials[self.current_index]
+            credential_filename = os.path.basename(credential['file_path'])
+            usage_stats_manager.record_credential_usage(credential_filename)
+            logger.info(f"Using fixed credential (rotation disabled): {credential_filename}")
+            return credential['data']
 
-        # 检查是否需要轮换
+        # 正常轮换逻辑
         if self.usage_count >= rotation_count:
             self.current_index = (self.current_index + 1) % len(self.credentials)
             self.usage_count = 0  # 重置计数器
@@ -119,6 +136,58 @@ class CodeBuddyTokenManager:
         except Exception as e:
             logger.error(f"Failed to save credential: {e}")
             return False
+    
+    def set_manual_credential(self, index: int) -> bool:
+        """手动选择指定索引的凭证"""
+        if 0 <= index < len(self.credentials):
+            self.manual_selected_index = index
+            credential_filename = os.path.basename(self.credentials[index]['file_path'])
+            logger.info(f"Manually selected credential: {credential_filename} (index: {index})")
+            return True
+        else:
+            logger.error(f"Invalid credential index: {index}")
+            return False
+    
+    def clear_manual_selection(self):
+        """清除手动选择，恢复自动轮换"""
+        self.manual_selected_index = None
+        logger.info("Cleared manual credential selection, resumed automatic rotation")
+    
+    def get_current_credential_info(self) -> Dict:
+        """获取当前使用的凭证信息"""
+        from config import get_rotation_count
+        
+        if not self.credentials:
+            return {"status": "no_credentials"}
+        
+        rotation_count = get_rotation_count()
+        
+        if self.manual_selected_index is not None:
+            credential = self.credentials[self.manual_selected_index]
+            return {
+                "status": "manual_selected",
+                "index": self.manual_selected_index,
+                "filename": os.path.basename(credential['file_path']),
+                "user_id": credential['data'].get('user_id', 'unknown')
+            }
+        elif rotation_count == 0:
+            credential = self.credentials[self.current_index]
+            return {
+                "status": "rotation_disabled",
+                "index": self.current_index,
+                "filename": os.path.basename(credential['file_path']),
+                "user_id": credential['data'].get('user_id', 'unknown')
+            }
+        else:
+            credential = self.credentials[self.current_index]
+            return {
+                "status": "auto_rotation",
+                "index": self.current_index,
+                "filename": os.path.basename(credential['file_path']),
+                "user_id": credential['data'].get('user_id', 'unknown'),
+                "usage_count": self.usage_count,
+                "rotation_count": rotation_count
+            }
 
 
 # 全局token管理器实例

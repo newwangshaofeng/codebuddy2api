@@ -348,3 +348,51 @@ async def add_credential(
     except Exception as e:
         logger.error(f"添加凭证失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/v1/credentials/select", summary="Manually select a credential")
+async def select_credential(
+    request: Request,
+    _token: str = Depends(authenticate)
+):
+    """手动选择指定的凭证"""
+    try:
+        data = await request.json()
+        index = data.get("index")
+
+        if index is None:
+            raise HTTPException(status_code=422, detail="index is required")
+
+        success = codebuddy_token_manager.set_manual_credential(index)
+        if not success:
+            raise HTTPException(status_code=400, detail="Invalid credential index")
+        
+        return {"message": f"Credential #{index + 1} selected successfully"}
+
+    except Exception as e:
+        logger.error(f"选择凭证失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/v1/credentials/auto", summary="Resume automatic credential rotation")
+async def resume_auto_rotation(_token: str = Depends(authenticate)):
+    """恢复自动凭证轮换"""
+    try:
+        codebuddy_token_manager.clear_manual_selection()
+        return {"message": "Resumed automatic credential rotation"}
+
+    except Exception as e:
+        logger.error(f"恢复自动轮换失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/v1/credentials/current", summary="Get current credential info")
+async def get_current_credential(_token: str = Depends(authenticate)):
+    """获取当前使用的凭证信息"""
+    try:
+        info = codebuddy_token_manager.get_current_credential_info()
+        return info
+
+    except Exception as e:
+        logger.error(f"获取当前凭证信息失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

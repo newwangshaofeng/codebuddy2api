@@ -254,7 +254,34 @@ class CodeBuddyTokenManager:
         except Exception as e:
             logger.error(f"Failed to save credential: {e}")
             return False
-    
+
+    def delete_credential_by_index(self, index: int) -> bool:
+        """删除指定索引的凭证文件，并重新加载列表"""
+        try:
+            if not (0 <= index < len(self.credentials)):
+                logger.error(f"Invalid credential index for deletion: {index}")
+                return False
+
+            file_path = self.credentials[index]['file_path']
+            filename = os.path.basename(file_path)
+
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Deleted credential file: {filename}")
+            else:
+                logger.warning(f"Credential file already missing: {filename}")
+
+            # 重新加载凭证列表，重置索引等状态
+            self.load_all_tokens()
+            # 清理手动选择（若已删除的索引影响手动选择状态）
+            if self.manual_selected_index is not None and self.manual_selected_index == index:
+                self.manual_selected_index = None
+                logger.info("Cleared manual selection because deleted credential was selected")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete credential at index {index}: {e}")
+            return False
+
     def set_manual_credential(self, index: int) -> bool:
         """手动选择指定索引的凭证"""
         if 0 <= index < len(self.credentials):

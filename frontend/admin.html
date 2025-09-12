@@ -1484,6 +1484,77 @@
 
         function displayCredentials() {
             const credentialsList = document.getElementById('credentialsList');
+            // 分组渲染：按邮箱或用户ID分组，添加删除按钮
+            if (credentialsCache && Array.isArray(credentialsCache) && credentialsCache.length > 0) {
+                const groups = {};
+                credentialsCache.forEach((cred, index) => {
+                    const key = cred.email || cred.user_id || 'unknown';
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push({ cred, index });
+                });
+
+                const groupKeys = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+                let html = '';
+                groupKeys.forEach(key => {
+                    const items = groups[key];
+                    const label = key === 'unknown' ? '未知用户' : (key.includes('@') ? `邮箱: ${key}` : `用户ID: ${key}`);
+                    html += `
+                        <div class="card" style="margin-bottom: 1rem;">
+                            <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                                <div class="card-title">${label}</div>
+                                <div class="status status-info">合计 ${items.length} 个凭证</div>
+                            </div>
+                            <div class="credential-list">
+                    `;
+
+                    html += items.map(({ cred, index }) => {
+                        let statusIcon = '';
+                        switch(cred.status) {
+                            case 'valid':
+                                statusIcon = `<i class="fas fa-check-circle" style="color: var(--success-color); font-size: 1.5rem;" title="有效"></i>`;
+                                break;
+                            case 'invalid':
+                                statusIcon = `<i class="fas fa-times-circle" style="color: var(--error-color); font-size: 1.5rem;" title="无效"></i>`;
+                                break;
+                            default:
+                                statusIcon = `<i class="fas fa-question-circle" style="color: var(--secondary-color); font-size: 1.5rem;" title="未验证"></i>`;
+                        }
+
+                        return `
+                            <div class="credential-item">
+                                <div class="credential-status-icon">${statusIcon}</div>
+                                <div class="credential-info">
+                                    <div class="credential-id">凭证 #${index + 1} ${cred.filename ? `<small style=\"color: var(--secondary-color);\">(${cred.filename})</small>` : ''}</div>
+                                    <div class="credential-details">
+                                        ${cred.user_id ? `用户ID: ${cred.user_id}<br>` : ''}
+                                        ${cred.token_preview ? `Token: ${cred.token_preview}<br>` : ''}
+                                        ${cred.created_at ? `创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}` : ''}
+                                    </div>
+                                </div>
+                                <div class="credential-actions">
+                                    <button class="btn btn-warning" onclick="selectCredential(${index})" title="手动选择此凭证">
+                                        <i class="fas fa-hand-pointer"></i> 选择
+                                    </button>
+                                    <button class="btn btn-success" onclick="testCredential(${index})">
+                                        <i class="fas fa-check"></i> 测试
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteCredential(${index})" title="删除此凭证">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                credentialsList.innerHTML = html;
+                return;
+            }
             
             if (credentialsCache.length === 0) {
                 credentialsList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--secondary-color);">暂无凭证，请添加第一个凭证</div>';
@@ -1526,6 +1597,28 @@
                     </div>
                 `}).join('') +
             '</div>';
+        }
+
+        async function deleteCredential(index) {
+            if (!confirm(`确定要删除凭证 #${index + 1} 吗？此操作不可恢复。`)) return;
+            try {
+                const response = await fetch('/codebuddy/v1/credentials/delete', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ index })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    showNotification(data.message || '删除成功', 'success');
+                    await loadCredentials();
+                    await loadCurrentCredentialStatus();
+                } else {
+                    const err = await response.json();
+                    showNotification(`删除失败: ${err.detail || response.status}`, 'error');
+                }
+            } catch (error) {
+                showNotification(`删除失败: ${error.message}`, 'error');
+            }
         }
 
         async function addCredential() {

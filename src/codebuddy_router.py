@@ -436,3 +436,29 @@ async def get_current_credential(_token: str = Depends(authenticate)):
     except Exception as e:
         logger.error(f"获取当前凭证信息失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/v1/credentials/delete", summary="Delete a credential by index")
+async def delete_credential(request: Request, _token: str = Depends(authenticate)):
+    """删除一个凭证文件（通过索引）并从列表中移除"""
+    try:
+        data = await request.json()
+        index = data.get("index")
+
+        if index is None:
+            raise HTTPException(status_code=422, detail="index is required")
+
+        if not isinstance(index, int):
+            raise HTTPException(status_code=422, detail="index must be an integer")
+
+        success = codebuddy_token_manager.delete_credential_by_index(index)
+        if not success:
+            raise HTTPException(status_code=400, detail="Invalid index or failed to delete credential")
+
+        return {"message": f"Credential #{index + 1} deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除凭证失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

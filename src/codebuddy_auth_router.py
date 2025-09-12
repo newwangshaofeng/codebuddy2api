@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 CODEBUDDY_BASE_URL = 'https://www.codebuddy.ai'
 CODEBUDDY_AUTH_TOKEN_ENDPOINT = f'{CODEBUDDY_BASE_URL}/v2/plugin/auth/token'
 CODEBUDDY_AUTH_STATE_ENDPOINT = f'{CODEBUDDY_BASE_URL}/v2/plugin/auth/state'
+_last_auth_state: Optional[str] = None
 
 # --- Router Setup ---
 router = APIRouter()
@@ -66,6 +67,9 @@ def get_auth_start_headers() -> Dict[str, str]:
         'Host': 'www.codebuddy.ai',
         'Accept': 'application/json, text/plain, */*',
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Connection': 'close',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Domain': 'www.codebuddy.ai',
         'X-No-Authorization': 'true',
@@ -84,6 +88,9 @@ def get_auth_poll_headers() -> Dict[str, str]:
     return {
         'Host': 'www.codebuddy.ai',
         'Accept': 'application/json, text/plain, */*',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Connection': 'close',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Request-ID': request_id,
         'b3': f'{request_id}-{span_id}-1-',
@@ -109,8 +116,10 @@ async def start_codebuddy_auth() -> Dict[str, Any]:
         
         # 调用 /v2/plugin/auth/state 获取认证状态和URL
         async with httpx.AsyncClient(verify=False) as client:
-            state_url = f"{CODEBUDDY_AUTH_STATE_ENDPOINT}?platform=CLI"
-            payload = {}
+            # 为避免上游/中间层缓存，添加随机nonce参数，确保每次请求唯一
+            nonce = secrets.token_hex(8)
+            state_url = f"{CODEBUDDY_AUTH_STATE_ENDPOINT}?platform=CLI&nonce={nonce}"
+            payload = {"nonce": nonce}
             
             response = await client.post(state_url, json=payload, headers=headers, timeout=30)
             
@@ -122,7 +131,28 @@ async def start_codebuddy_auth() -> Dict[str, Any]:
                     auth_url = data.get('authUrl')
                     
                     if auth_state and auth_url:
+                        global _last_auth_state
+                        if _last_auth_state and auth_state == _last_auth_state:
+                            logger.warning("上游返回的state与上一次相同，尝试重新获取新的state...")
+                            try:
+                                nonce2 = secrets.token_hex(8)
+                                state_url2 = f"{CODEBUDDY_AUTH_STATE_ENDPOINT}?platform=CLI&nonce={nonce2}"
+                                payload2 = {"nonce": nonce2}
+                                async with httpx.AsyncClient(verify=False) as client2:
+                                    response2 = await client2.post(state_url2, json=payload2, headers=headers, timeout=30)
+                                if response2.status_code == 200:
+                                    result2 = response2.json()
+                                    if result2.get('code') == 0 and result2.get('data'):
+                                        data2 = result2['data']
+                                        ns = data2.get('state')
+                                        nu = data2.get('authUrl')
+                                        if ns and nu and ns != auth_state:
+                                            auth_state = ns
+                                            auth_url = nu
+                            except Exception:
+                                pass
                         token_endpoint = f"{CODEBUDDY_AUTH_TOKEN_ENDPOINT}?state={auth_state}"
+                        _last_auth_state = auth_state
                         
                         return {
                             "success": True,

@@ -1720,6 +1720,16 @@
             const btn = document.getElementById('getAuthBtn');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在获取认证链接...';
+            // 确保清理旧的轮询和状态，并显示链接区域
+            try { stopPolling(); } catch (e) {}
+            currentAuthData = null;
+            const authUrlSection = document.getElementById('authUrlSection');
+            const authUrlInput = document.getElementById('authUrlInput');
+            if (authUrlInput) authUrlInput.value = '';
+            if (authUrlSection) {
+                authUrlSection.classList.remove('hidden');
+                authUrlSection.style.display = 'block';
+            }
             
             try {
                 const response = await fetch('/codebuddy/auth/start', { method: 'GET' });
@@ -1734,7 +1744,9 @@
 
                     // 修正：使用正确的字段来设置输入框的值，并显示该区域
                     document.getElementById('authUrlInput').value = data.verification_uri_complete;
-                    document.getElementById('authUrlSection').classList.remove('hidden');
+                    const section = document.getElementById('authUrlSection');
+                    section.classList.remove('hidden');
+                    section.style.display = 'block';
                     
                     showNotification('✅ 认证链接已生成，请点击链接完成登录', 'success');
                     

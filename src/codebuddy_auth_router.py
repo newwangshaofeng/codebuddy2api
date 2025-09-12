@@ -223,28 +223,96 @@ async def save_codebuddy_token(token_data: Dict[str, Any]) -> bool:
         # 从JWT中解析用户信息
         bearer_token = token_data.get("access_token") or token_data.get("bearer_token")
         user_id = "unknown"
+        user_info = {}
         
         try:
-            if bearer_token:
-                payload_part = bearer_token.split('.')[1]
-                payload_part += '=' * (4 - len(payload_part) % 4)
-                payload = base64.urlsafe_b64decode(payload_part)
-                jwt_data = json.loads(payload)
-                user_id = jwt_data.get('sub') or jwt_data.get('preferred_username') or jwt_data.get('email') or "unknown"
-                logger.info(f"从JWT中解析出用户ID: {user_id}")
+            if bearer_token and '.' in bearer_token:
+                # 分割JWT token
+                parts = bearer_token.split('.')
+                if len(parts) >= 2:
+                    payload_part = parts[1]
+                    
+                    # 修复Base64 padding问题
+                    missing_padding = len(payload_part) % 4
+                    if missing_padding:
+                        payload_part += '=' * (4 - missing_padding)
+                    
+                    # 解码JWT payload
+                    try:
+                        payload = base64.urlsafe_b64decode(payload_part)
+                        jwt_data = json.loads(payload.decode('utf-8'))
+                        
+                        # 提取用户信息，优先使用邮箱作为用户标识
+                        user_id = (jwt_data.get('email') or 
+                                 jwt_data.get('preferred_username') or 
+                                 jwt_data.get('sub') or 
+                                 "unknown")
+                        
+                        # 保存完整的用户信息
+                        user_info = {
+                            'sub': jwt_data.get('sub'),
+                            'email': jwt_data.get('email'),
+                            'preferred_username': jwt_data.get('preferred_username'),
+                            'name': jwt_data.get('name'),
+                            'given_name': jwt_data.get('given_name'),
+                            'family_name': jwt_data.get('family_name'),
+                            'exp': jwt_data.get('exp'),
+                            'iat': jwt_data.get('iat'),
+                            'scope': jwt_data.get('scope'),
+                            'session_state': jwt_data.get('sid')
+                        }
+                        
+                        # 移除None值
+                        user_info = {k: v for k, v in user_info.items() if v is not None}
+                        
+                        logger.info(f"成功解析JWT，用户: {user_id}")
+                        logger.debug(f"JWT用户信息: {user_info}")
+                        
+                    except (json.JSONDecodeError, UnicodeDecodeError) as decode_error:
+                        logger.warning(f"JWT payload解码失败: {decode_error}")
+                        user_id = token_data.get('domain', 'unknown')
+                else:
+                    logger.warning("JWT格式无效：缺少必要的部分")
+                    user_id = token_data.get('domain', 'unknown')
+            else:
+                logger.warning("Bearer token为空或格式无效")
+                user_id = token_data.get('domain', 'unknown')
+                
         except Exception as e:
-            logger.warning(f"无法从JWT中解析用户信息: {e}")
+            logger.error(f"JWT解析过程发生异常: {e}")
             user_id = token_data.get('domain', 'unknown')
         
+        # 构建完整的凭证数据
+        credential_data = {
+            "bearer_token": bearer_token,
+            "user_id": user_id,
+            "created_at": int(time.time()),
+            "expires_in": token_data.get('expires_in'),
+            "refresh_token": token_data.get('refresh_token'),
+            "token_type": token_data.get('token_type', 'Bearer'),
+            "scope": token_data.get('scope'),
+            "domain": token_data.get('domain'),
+            "session_state": token_data.get('session_state'),
+            "user_info": user_info,
+            "full_response": token_data  # 保存完整的原始响应
+        }
+        
+        # 移除None值，保持文件整洁
+        credential_data = {k: v for k, v in credential_data.items() if v is not None}
+        
+        # 生成更友好的文件名
+        timestamp = int(time.time())
+        safe_user_id = "".join(c for c in user_id if c.isalnum() or c in "._-")[:20]
+        filename = f"codebuddy_{safe_user_id}_{timestamp}.json"
+        
         # 使用token管理器保存
-        success = codebuddy_token_manager.add_credential(
-            bearer_token=bearer_token,
-            user_id=user_id,
-            filename=f"codebuddy_oauth_{int(time.time())}.json"
+        success = codebuddy_token_manager.add_credential_with_data(
+            credential_data=credential_data,
+            filename=filename
         )
         
         if success:
-            logger.info(f"成功保存CodeBuddy token，用户: {user_id}")
+            logger.info(f"成功保存CodeBuddy token，用户: {user_id}，文件: {filename}")
         
         return success
         

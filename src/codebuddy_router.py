@@ -307,21 +307,61 @@ async def list_v1_models(_token: str = Depends(authenticate)):
 
 @router.get("/v1/credentials", summary="List all available credentials")
 async def list_credentials(_token: str = Depends(authenticate)):
-    """列出所有可用凭证的简略信息"""
-    credentials = codebuddy_token_manager.get_all_credentials()
-    safe_credentials = []
-    for i, cred in enumerate(credentials):
-        bearer_token = cred.get("bearer_token", "")
-        safe_cred = {
-            "index": i,
-            "user_id": cred.get("user_id", "unknown"),
-            "created_at": cred.get("created_at", 0),
-            "has_token": bool(bearer_token),
-            "token_preview": f"{bearer_token[:10]}...{bearer_token[-4:]}" if bearer_token and len(bearer_token) > 14 else "Invalid Token"
-        }
-        safe_credentials.append(safe_cred)
-    
-    return {"credentials": safe_credentials}
+    """列出所有可用凭证的详细信息，包括过期状态"""
+    try:
+        credentials_info = codebuddy_token_manager.get_credentials_info()
+        safe_credentials = []
+        
+        for info in credentials_info:
+            bearer_token = ""
+            # 从原始数据中获取token用于预览
+            credentials = codebuddy_token_manager.get_all_credentials()
+            if info['index'] < len(credentials):
+                bearer_token = credentials[info['index']].get("bearer_token", "")
+            
+            # 格式化时间显示
+            time_remaining_str = "Unknown"
+            if info['time_remaining'] is not None:
+                if info['time_remaining'] > 0:
+                    days = info['time_remaining'] // 86400
+                    hours = (info['time_remaining'] % 86400) // 3600
+                    minutes = (info['time_remaining'] % 3600) // 60
+                    if days > 0:
+                        time_remaining_str = f"{days}d {hours}h"
+                    elif hours > 0:
+                        time_remaining_str = f"{hours}h {minutes}m"
+                    else:
+                        time_remaining_str = f"{minutes}m"
+                else:
+                    time_remaining_str = "Expired"
+            
+            safe_cred = {
+                "index": info['index'],
+                "filename": info['filename'],
+                "user_id": info['user_id'],
+                "email": info['email'],
+                "name": info['name'],
+                "created_at": info['created_at'],
+                "expires_in": info['expires_in'],
+                "expires_at": info['expires_at'],
+                "time_remaining": info['time_remaining'],
+                "time_remaining_str": time_remaining_str,
+                "is_expired": info['is_expired'],
+                "token_type": info['token_type'],
+                "scope": info['scope'],
+                "domain": info['domain'],
+                "has_refresh_token": info['has_refresh_token'],
+                "session_state": info['session_state'],
+                "has_token": bool(bearer_token),
+                "token_preview": f"{bearer_token[:10]}...{bearer_token[-4:]}" if bearer_token and len(bearer_token) > 14 else "Invalid Token"
+            }
+            safe_credentials.append(safe_cred)
+        
+        return {"credentials": safe_credentials}
+        
+    except Exception as e:
+        logger.error(f"获取凭证列表失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/v1/credentials", summary="Add a new credential")

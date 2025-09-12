@@ -6,7 +6,7 @@ import glob
 import json
 import time
 import logging
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from .usage_stats_manager import usage_stats_manager
 
 logger = logging.getLogger(__name__)
@@ -57,27 +57,80 @@ class CodeBuddyTokenManager:
         
         logger.info(f"Loaded a total of {len(self.credentials)} CodeBuddy credentials.")
     
+    def is_token_expired(self, credential_data: Dict) -> bool:
+        """检查token是否过期"""
+        try:
+            created_at = credential_data.get('created_at')
+            expires_in = credential_data.get('expires_in')
+            
+            if not created_at or not expires_in:
+                # 如果没有过期信息，假设未过期（向后兼容）
+                return False
+            
+            current_time = int(time.time())
+            expiry_time = created_at + expires_in
+            
+            # 提前5分钟认为过期，留出刷新时间
+            buffer_time = 300  # 5分钟
+            is_expired = current_time >= (expiry_time - buffer_time)
+            
+            if is_expired:
+                user_id = credential_data.get('user_id', 'unknown')
+                logger.warning(f"Token for user {user_id} is expired or will expire soon")
+            
+            return is_expired
+        except Exception as e:
+            logger.error(f"Error checking token expiry: {e}")
+            return False
+    
     def get_next_credential(self) -> Optional[Dict]:
-        """获取下一个可用的凭证，根据轮换策略"""
+        """获取下一个可用的凭证，根据轮换策略，并检查过期状态"""
         from config import get_rotation_count
 
         if not self.credentials:
             return None
         
-        # 如果当前索引无效（例如，在加载后删除了所有凭证），则重置
-        if self.current_index >= len(self.credentials):
-            self.current_index = 0
+        # 过滤掉过期的凭证
+        valid_credentials = []
+        for i, cred in enumerate(self.credentials):
+            if not self.is_token_expired(cred['data']):
+                valid_credentials.append((i, cred))
+            else:
+                filename = os.path.basename(cred['file_path'])
+                logger.warning(f"Skipping expired credential: {filename}")
+        
+        if not valid_credentials:
+            logger.error("No valid (non-expired) credentials available")
+            return None
+        
+        # 如果当前索引无效或指向过期凭证，重置到第一个有效凭证
+        current_valid_indices = [i for i, _ in valid_credentials]
+        if self.current_index not in current_valid_indices:
+            self.current_index = current_valid_indices[0]
             self.usage_count = 0
+            logger.info(f"Reset to first valid credential index: {self.current_index}")
 
         rotation_count = get_rotation_count()
         
-        # 如果有手动选择的凭证，优先使用
+        # 如果有手动选择的凭证，优先使用（如果未过期）
         if self.manual_selected_index is not None and 0 <= self.manual_selected_index < len(self.credentials):
-            credential = self.credentials[self.manual_selected_index]
-            credential_filename = os.path.basename(credential['file_path'])
-            usage_stats_manager.record_credential_usage(credential_filename)
-            logger.info(f"Using manually selected credential: {credential_filename}")
-            return credential['data']
+            manual_cred = self.credentials[self.manual_selected_index]
+            if not self.is_token_expired(manual_cred['data']):
+                credential_filename = os.path.basename(manual_cred['file_path'])
+                usage_stats_manager.record_credential_usage(credential_filename)
+                logger.info(f"Using manually selected credential: {credential_filename}")
+                return manual_cred['data']
+            else:
+                logger.warning("Manually selected credential is expired, falling back to automatic rotation")
+                self.manual_selected_index = None
+        
+        # 找到当前索引在有效凭证中的位置
+        try:
+            current_valid_position = current_valid_indices.index(self.current_index)
+        except ValueError:
+            current_valid_position = 0
+            self.current_index = current_valid_indices[0]
+            self.usage_count = 0
         
         # 如果轮换次数设置为0，关闭轮换，只使用当前凭证
         if rotation_count == 0:
@@ -89,7 +142,9 @@ class CodeBuddyTokenManager:
 
         # 正常轮换逻辑
         if self.usage_count >= rotation_count:
-            self.current_index = (self.current_index + 1) % len(self.credentials)
+            # 轮换到下一个有效凭证
+            next_valid_position = (current_valid_position + 1) % len(valid_credentials)
+            self.current_index = current_valid_indices[next_valid_position]
             self.usage_count = 0  # 重置计数器
             logger.info("Credential rotation triggered.")
 
@@ -110,15 +165,55 @@ class CodeBuddyTokenManager:
         """获取所有凭证"""
         return [cred['data'] for cred in self.credentials]
     
+    def get_credentials_info(self) -> List[Dict]:
+        """获取所有凭证的详细信息，包括过期状态"""
+        credentials_info = []
+        for i, cred in enumerate(self.credentials):
+            data = cred['data']
+            filename = os.path.basename(cred['file_path'])
+            
+            # 计算过期信息
+            is_expired = self.is_token_expired(data)
+            expires_at = None
+            time_remaining = None
+            
+            if data.get('created_at') and data.get('expires_in'):
+                expires_at = data['created_at'] + data['expires_in']
+                time_remaining = expires_at - int(time.time())
+            
+            # 提取用户信息
+            user_info = data.get('user_info', {})
+            
+            info = {
+                'index': i,
+                'filename': filename,
+                'user_id': data.get('user_id', 'unknown'),
+                'email': user_info.get('email') or data.get('user_id'),
+                'name': user_info.get('name'),
+                'created_at': data.get('created_at'),
+                'expires_in': data.get('expires_in'),
+                'expires_at': expires_at,
+                'time_remaining': time_remaining,
+                'is_expired': is_expired,
+                'token_type': data.get('token_type', 'Bearer'),
+                'scope': data.get('scope'),
+                'domain': data.get('domain'),
+                'has_refresh_token': bool(data.get('refresh_token')),
+                'session_state': data.get('session_state'),
+                'file_path': cred['file_path']
+            }
+            
+            credentials_info.append(info)
+        
+        return credentials_info
+    
     def add_credential(self, bearer_token: str, user_id: str = None, filename: str = None) -> bool:
-        """添加新的凭证"""
+        """添加新的凭证（简化版本，向后兼容）"""
         if not filename:
             filename = f"codebuddy_token_{len(self.credentials) + 1}.json"
         
         if not filename.endswith('.json'):
             filename += '.json'
-        
-        file_path = os.path.join(self.creds_dir, filename)
         
         credential_data = {
             "bearer_token": bearer_token,
@@ -126,9 +221,32 @@ class CodeBuddyTokenManager:
             "created_at": int(time.time())
         }
         
+        return self.add_credential_with_data(credential_data, filename)
+    
+    def add_credential_with_data(self, credential_data: Dict[str, Any], filename: str = None) -> bool:
+        """添加新的凭证（完整数据版本）"""
+        if not filename:
+            user_id = credential_data.get('user_id', 'unknown')
+            timestamp = credential_data.get('created_at', int(time.time()))
+            safe_user_id = "".join(c for c in str(user_id) if c.isalnum() or c in "._-")[:20]
+            filename = f"codebuddy_{safe_user_id}_{timestamp}.json"
+        
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        file_path = os.path.join(self.creds_dir, filename)
+        
+        # 确保必要字段存在
+        if 'created_at' not in credential_data:
+            credential_data['created_at'] = int(time.time())
+        
         try:
+            # 确保目录存在
+            if not os.path.exists(self.creds_dir):
+                os.makedirs(self.creds_dir)
+            
             with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(credential_data, f, indent=4)
+                json.dump(credential_data, f, indent=4, ensure_ascii=False)
             
             logger.info(f"Added new credential: {filename}")
             self.load_all_tokens()  # 重新加载

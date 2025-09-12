@@ -1528,7 +1528,9 @@
                                     <div class="credential-details">
                                         ${cred.user_id ? `用户ID: ${cred.user_id}<br>` : ''}
                                         ${cred.token_preview ? `Token: ${cred.token_preview}<br>` : ''}
-                                        ${cred.created_at ? `创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}` : ''}
+                                        ${cred.created_at ? `创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}<br>` : ''}
+                                        过期时间: ${cred.expires_at != null ? new Date(cred.expires_at * 1000).toLocaleString() : 'null'}<br>
+                                        剩余: ${cred.time_remaining_str || 'null'}
                                     </div>
                                 </div>
                                 <div class="credential-actions">
@@ -1583,7 +1585,9 @@
                             <div class="credential-details">
                                 ${cred.user_id ? `用户ID: ${cred.user_id}<br>` : ''}
                                 ${cred.token_preview ? `Token: ${cred.token_preview}<br>` : ''}
-                                ${cred.created_at ? `创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}` : ''}
+                                ${cred.created_at ? `创建时间: ${new Date(cred.created_at * 1000).toLocaleString()}<br>` : ''}
+                                过期时间: ${cred.expires_at != null ? new Date(cred.expires_at * 1000).toLocaleString() : 'null'}<br>
+                                剩余: ${cred.time_remaining_str || 'null'}
                             </div>
                         </div>
                         <div class="credential-actions">

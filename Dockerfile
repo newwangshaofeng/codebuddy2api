@@ -20,13 +20,12 @@ RUN apt-get update && \
     apt-get install -y gosu && \
     rm -rf /var/lib/apt/lists/*
 
-# 复制并设置入口脚本
-COPY entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/entrypoint.sh
-ENTRYPOINT ["entrypoint.sh"]
-
 # 创建一个非root用户来运行应用
 RUN useradd -m -u 1001 appuser
+
+# 设置目录权限并直接运行服务
+RUN chown -R appuser:appuser /app && \
+    chown -R appuser:appuser /usr/local/bin
 
 # 声明容器将要监听的端口
 # 这个端口应该与您在配置中设置的 CODEBUDDY_PORT 一致
@@ -34,4 +33,4 @@ EXPOSE 8001
 
 # 定义容器启动时要执行的命令
 # 使用 Hypercorn 启动，它是一个生产级的 ASGI 服务器
-CMD ["hypercorn", "web:app", "--bind", "0.0.0.0:8001"]
+CMD ["gosu", "appuser", "hypercorn", "web:app", "--bind", "0.0.0.0:8001"]

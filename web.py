@@ -13,6 +13,7 @@ from src.codebuddy_router import router as codebuddy_router
 from src.codebuddy_auth_router import router as codebuddy_auth_router
 from src.settings_router import router as settings_router
 from src.frontend_router import router as frontend_router
+from src.health_router import router as health_router
 
 from config import get_server_host, get_server_port, get_log_level
 
@@ -76,11 +77,12 @@ app.include_router(
     tags=["Settings Management"]
 )
 
-# 健康检查端点
-@app.get("/health")
-async def health_check():
-    """健康检查"""
-    return {"status": "healthy", "service": "codebuddy2api"}
+# 挂载健康检查路由
+app.include_router(
+    health_router,
+    prefix="/api",
+    tags=["Health Check"]
+)
 
 
 @app.get("/")

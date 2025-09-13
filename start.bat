@@ -9,18 +9,51 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Enforce Python 3.8+ version requirement
+python -c "import sys; exit(0 if sys.version_info[:2] >= (3, 8) else 1)" >nul 2>&1
+if errorlevel 1 (
+  for /f "tokens=2 delims= " %%v in ('python -V 2^>^&1') do set PY_VER=%%v
+  echo Python 3.8+ is required. Found: %PY_VER%
+  exit /b 1
+)
+
 REM Check if virtual environment exists
 if not exist "venv" (
     echo Creating virtual environment...
     python -m venv venv
+    if errorlevel 1 (
+        echo Failed to create virtual environment.
+        exit /b 1
+    )
 )
 
 REM Activate virtual environment
+if not exist "venv\Scripts\activate.bat" (
+    echo Activation script missing. Recreating virtual environment...
+    rmdir /S /Q venv
+    if errorlevel 1 (
+        echo Failed to remove existing venv directory.
+        exit /b 1
+    )
+    python -m venv venv
+    if errorlevel 1 (
+        echo Failed to recreate virtual environment.
+        exit /b 1
+    )
+)
 call venv\Scripts\activate.bat
+if errorlevel 1 (
+    echo Failed to activate virtual environment.
+    exit /b 1
+)
 
 REM Install dependencies
 echo Installing dependencies...
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
+if errorlevel 1 (
+    echo Failed to install dependencies with pip.
+    exit /b 1
+)
 
 REM Check environment variables and load from .env if exists
 if not defined CODEBUDDY_PASSWORD (
@@ -42,5 +75,5 @@ if not defined CODEBUDDY_PASSWORD (
 REM Start service
 echo Starting CodeBuddy2API service...
 python web.py
-
+echo Starting CodeBuddy2API service ok...
 pause
